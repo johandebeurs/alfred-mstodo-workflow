@@ -1,0 +1,15 @@
+*.pyc
+*.pyo
+*.orig
+
+/dist
+
+/.tmp
+
+/htmlcov
+.coverage
+
+node_modules
+app/www/bower_components
+
+mstodo-*.alfredworkflow
