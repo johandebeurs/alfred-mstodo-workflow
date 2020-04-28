@@ -15,16 +15,16 @@ Beginner and advanced approaches to adding a monthly repeating task beginning th
 Setup
 -----
 
-### [Download here](https://raw.github.com/idpaterson/alfred-wunderlist-workflow/master/Wunderlist.alfredworkflow)
+### [Download here](https://raw.github.com/johandebeurs/alfred-mstodo-workflow/master/mstodo.alfredworkflow)
 
-After downloading, simply double-click to install the workflow in Alfred. Use the `wl` command in Alfred to activate the workflow, or assign a hotkey in Alfred preferences. The workflow will guide you through securely logging in to Wunderlist and will even let you know when an important update is available.
+After downloading, simply double-click to install the workflow in Alfred. Use the `td` command in Alfred to activate the workflow, or assign a hotkey in Alfred preferences. The workflow will guide you through securely logging in to Microsoft ToDo and will even let you know when an important update is available.
 
 Add tasks
 --------
 
 The workflow provides an easy guided experience with tips along the way that will help you become a power user. 
 
-The welcome screen appears when you've typed `wl` (and nothing else). Special commands are in the form `wl-command` with no space; once you type a space after `wl ` you're in task entry mode. Partial commands are matched, so rather than typing `wl-upcoming` to get to the Upcoming tasks list you can type as little as `wl-up` or even `wlu`.
+The welcome screen appears when you've typed `td` (and nothing else). Special commands are in the form `td-command` with no space; once you type a space after `td ` you're in task entry mode. Partial commands are matched, so rather than typing `td-upcoming` to get to the Upcoming tasks list you can type as little as `td-up` or even `tdu`.
 
 ![Welcome screen](https://cloud.githubusercontent.com/assets/507058/18088099/92f50464-6e86-11e6-9706-d9f4d903dc4d.png)
 
@@ -35,7 +35,7 @@ Add your first task! As you type, the workflow will pick out due dates and recur
 
 ![Task with due date and recurrence](https://cloud.githubusercontent.com/assets/507058/11858336/bbcb7c1a-a42e-11e5-85f6-414aa82fcbbb.png)
 
-Use the menus to configure your task until you become a power user capable of typing everything manually. It's so worthwhile to be able to drop tasks into Wunderlist in under a second.
+Use the menus to configure your task until you become a power user capable of typing everything manually. It's so worthwhile to be able to drop tasks into Microsoft ToDo in under a second.
 
 ![Due date menu](https://cloud.githubusercontent.com/assets/507058/7895423/d67861e4-065a-11e5-95fa-2bedeb70432b.png)
 
@@ -49,44 +49,44 @@ You can also select a list *after* typing your task with the "in" keyword. To av
 
 #### Examples
 
-> <strong>wl h:Fix the broken step saturday morning*</strong>
+> <strong>td h:Fix the broken step saturday morning*</strong>
 >
-> ![wl h:Fix the broken step saturday morning*](https://cloud.githubusercontent.com/assets/507058/11939350/90d6001a-a7ef-11e5-9823-3273f611599c.png)
+> ![td h:Fix the broken step saturday morning*](https://cloud.githubusercontent.com/assets/507058/11939350/90d6001a-a7ef-11e5-9823-3273f611599c.png)
 >
-> **wl Buy clicky keyboard in shopping due sat**
+> **td Buy clicky keyboard in shopping due sat**
 >
 > ![Buy clicky keyboard in sho due sat](https://cloud.githubusercontent.com/assets/507058/11939279/ffefa6f0-a7ee-11e5-9b7f-f5b1d55747a0.png)
 
-> **wl Rearrange file cabinet tomorrow in WO**
+> **td Rearrange file cabinet tomorrow in WO**
 >
-> ![wl Rearrange file cabinet tomorrow in WO](https://cloud.githubusercontent.com/assets/507058/11939280/0244f108-a7ef-11e5-8d0d-726bb5e773d5.png)
+> ![td Rearrange file cabinet tomorrow in WO](https://cloud.githubusercontent.com/assets/507058/11939280/0244f108-a7ef-11e5-8d0d-726bb5e773d5.png)
 
 
 ### Reminders
 
-Wunderlist uses alerts to remind you about tasks that are due, either on the due date or in advance. To set a reminder, either include a time with your due date or use an explicit reminder phrase like *remind me at 3:00pm on June 11*). 
+Microsoft ToDo uses alerts to remind you about tasks that are due, either on the due date or in advance. To set a reminder, either include a time with your due date or use an explicit reminder phrase like *remind me at 3:00pm on June 11*). 
 
 #### Examples
 
-> **wl Pay DoubleCash credit card bill monthly June 26th remind me June 22**
+> **td Pay DoubleCash credit card bill monthly June 26th remind me June 22**
 >
-> ![wl Pay DoubleCash credit card bill monthly June 26th remind me June 22](https://cloud.githubusercontent.com/assets/507058/8271997/4779e33e-1800-11e5-91f4-55867bf1473a.png)
+> ![td Pay DoubleCash credit card bill monthly June 26th remind me June 22](https://cloud.githubusercontent.com/assets/507058/8271997/4779e33e-1800-11e5-91f4-55867bf1473a.png)
 >
-> **wl Make a New Year's resolution reminder: Jan 1 at midnight**
+> **td Make a New Year's resolution reminder: Jan 1 at midnight**
 >
-> ![wl Make a New Year's resolution reminder: Jan 1 at midnight](https://cloud.githubusercontent.com/assets/507058/8272030/c21fa028-1801-11e5-812a-fc66e4b9a232.png)
+> ![td Make a New Year's resolution reminder: Jan 1 at midnight](https://cloud.githubusercontent.com/assets/507058/8272030/c21fa028-1801-11e5-812a-fc66e4b9a232.png)
 >
-> **wl weekly meeting notes r 8am due 1d**
+> **td weekly meeting notes r 8am due 1d**
 >
-> ![wl weekly meeting notes r 8am due 1d](https://cloud.githubusercontent.com/assets/507058/8272020/5b49fd8a-1801-11e5-9d27-9851a8385bdc.png)
+> ![td weekly meeting notes r 8am due 1d](https://cloud.githubusercontent.com/assets/507058/8272020/5b49fd8a-1801-11e5-9d27-9851a8385bdc.png)
 >
-> **wl Laundry remind me**
+> **td Laundry remind me**
 >
-> ![wl Laundry remind me](https://cloud.githubusercontent.com/assets/507058/8272070/6c15c502-1803-11e5-9a17-ed65b1a98f20.png)
+> ![td Laundry remind me](https://cloud.githubusercontent.com/assets/507058/8272070/6c15c502-1803-11e5-9a17-ed65b1a98f20.png)
 >
-> **wl Ask about app icon at dinner tomorrow**
+> **td Ask about app icon at dinner tomorrow**
 >
-> ![wl Ask about app icon at dinner tomorrow](https://cloud.githubusercontent.com/assets/507058/11858195/5593905a-a42d-11e5-8e66-9b27afb31f23.png)
+> ![td Ask about app icon at dinner tomorrow](https://cloud.githubusercontent.com/assets/507058/11858195/5593905a-a42d-11e5-8e66-9b27afb31f23.png)
 
 #### When is the reminder?
 
@@ -107,7 +107,7 @@ You can set a custom default reminder time from the workflow preferences screen,
 Search and browse tasks
 -----------------------
 
-The `wl-search` command allows you to search tasks by keyword or browse by list. To seach within a list, use the same *wl-search My List: some query* syntax as when entering a task.
+The `td-search` command allows you to search tasks by keyword or browse by list. To seach within a list, use the same *td-search My List: some query* syntax as when entering a task.
 
 #### Default search view
 ![search](https://cloud.githubusercontent.com/assets/507058/14915653/9e9716d6-0de2-11e6-8cc6-b098136752fd.png)
@@ -132,7 +132,7 @@ Type the hash symbol # to view and select a tag.
 
 ### Upcoming tasks
 
-View upcoming tasks at `wl-upcoming`. It's kind of like the Week smart list in Wunderlist with the option to choose the duration that you prefer to look ahead (1 week, 2 weeks, 1 month, 3 days, whatever...). Like any other screen you can get there by typing as little as the first letter of the command: `wlu`:
+View upcoming tasks at `td-upcoming`. It's one half of the Planned list in Microsoft ToDo with the option to choose the duration that you prefer to look ahead (1 week, 2 weeks, 1 month, 3 days, whatever...). Like any other screen you can get there by typing as little as the first letter of the command: `tdu`:
 
 ![upcoming tasks](https://cloud.githubusercontent.com/assets/507058/17914990/9d5dbb88-6974-11e6-9fd4-592951703b09.png)
 
@@ -142,7 +142,7 @@ Browse or type to search your upcoming tasks. This screen can show upcoming task
 
 ### Due and overdue tasks
 
-The `wl-due` command shows tasks that are due or overdue, similar to the Today list in Wunderlist. By default it hoists any recurring tasks that are *multiple times overdue* to the top, but you can change the sort order. Sadly, I have quite a few tasks that are multiple times overdue, so this feature is mostly to keep me motivated but I hope others find it useful as well.
+The `td-due` command shows tasks that are due or overdue, similar the other half of the Planned list in Microsoft ToDo. By default it hoists any recurring tasks that are *multiple times overdue* to the top, but you can change the sort order. Sadly, I have quite a few tasks that are multiple times overdue, so this feature is mostly to keep me motivated but I hope others find it useful as well.
 
 ![due and overdue tasks](https://cloud.githubusercontent.com/assets/507058/18151270/e843b1aa-6fbb-11e6-9973-d35442d755f9.png)
 
@@ -150,7 +150,7 @@ This view is searchable, just type to filter the results by keyword.
 
 ### In sync
 
-The workflow stays in sync with Wunderlist, so your lists and tasks will be up-to-date and searchable. The due and upcoming screens will sync (or wait for the already-running sync) *before showing results* to make sure that everything is up-to-date. A notification is displayed if there is something to sync so that you're not waiting around too long without any feedback.
+The workflow stays in sync with Microsoft ToDo, so your lists and tasks will be up-to-date and searchable. The due and upcoming screens will sync (or wait for the already-running sync) *before showing results* to make sure that everything is up-to-date. A notification is displayed if there is something to sync so that you're not waiting around too long without any feedback.
 
 Editing tasks
 -------------
@@ -161,13 +161,13 @@ Tasks can be completed or deleted directly from the workflow. Simply find a task
 
 Overdue recurring tasks can be set due today to adjust the next occurrence by holding the <kbd>alt</kbd> key while marking a task complete. For example, if you are supposed to water the plants every 3 days but forget and do it 2 days late, you don't need to water them again the following day.
 
-### View in Wunderlist
+### View in Microsoft ToDo
 
-Any task can be opened in the Wunderlist desktop app for further editing. This is a quick way to view notes, subtasks, assignees, and other features that are not yet supported in the workflow.
+Any task can be opened in the Microsoft ToDo desktop app for further editing. This is a quick way to view notes, subtasks, assignees, and other features that are not yet supported in the workflow. Microsoft doesn't seem to support linking directly to a task so the closest I have found is to trigger a search on task title, which is good enough for an MVP.
 
-You can also open a new task in Wunderlist by holding down the <kbd>alt</kbd> key when creating the task.
+You can also open a new task in Microsoft ToDo by holding down the <kbd>alt</kbd> key when creating the task.
 
-![view in Wunderlist](https://cloud.githubusercontent.com/assets/507058/18151510/b95ec238-6fbd-11e6-99d8-e5215574a8a2.png)
+![view in Microsoft ToDo](https://cloud.githubusercontent.com/assets/507058/18151510/b95ec238-6fbd-11e6-99d8-e5215574a8a2.png)
 
 Hints
 -----
@@ -176,32 +176,32 @@ Read the text below each menu option and you'll be on your way to power user sta
 
 ### Command shorthand
 
-Commands like `wl:list` and `wl:pref` have been changed to `wl-list` and `wl-pref` to allow <kbd>alt</kbd>+<kbd>delete</kbd> to return you to the welcome screen (any non-word character is fine, I just chose `-` for its word breaking properties). Furthermore, these commands can be triggered with as little as the first letter. `wld` will get you to the `wl-due` screen and `wls` will get you to `wl-search`. For this reason, you may noticed that top-level commands are first-letter-distinct to avoid conflicts.
+Commands like `td:list` and `td:pref` have been changed to `td-list` and `td-pref` to allow <kbd>alt</kbd>+<kbd>delete</kbd> to return you to the welcome screen (any non-word character is fine, I just chose `-` for its word breaking properties). Furthermore, these commands can be triggered with as little as the first letter. `tdd` will get you to the `td-due` screen and `tds` will get you to `td-search`. For this reason, you may noticed that top-level commands are first-letter-distinct to avoid conflicts.
 
 ### Default list
 
-There is an option in `wl-pref` to set a list other than Inbox as the default when entering tasks. This will save keystrokes when entering a large number of tasks into a list or when a custom list is preferred over Inbox. You can also elect to use the previously-used list to facilitate entry of multiple tasks in the same list.
+There is an option in `td-pref` to set a list other than Tasks as the default when entering tasks. This will save keystrokes when entering a large number of tasks into a list or when a custom list is preferred over Tasks. You can also elect to use the previously-used list to facilitate entry of multiple tasks in the same list.
 
 ![default list](https://cloud.githubusercontent.com/assets/507058/18149679/ace487e4-6faf-11e6-98df-103381833788.png)
 
 ### Changelog
 
-If you notice any problems or want to see what changed in the latest version, jump to the *About* screen from the main menu or type `wl-about`. 
+If you notice any problems or want to see what changed in the latest version, jump to the *About* screen from the main menu or type `td-about`. 
 
 ![About screen](https://cloud.githubusercontent.com/assets/507058/18151547/129e48f0-6fbe-11e6-892e-ba6d8a8461da.png)
 
 ### Experimental updates
 
-Those who want to help test the newest features of the workflow can enable experimental updates in the `wl-pref` screen. When enabled, the workflow will prompt you to update to alpha and beta releases for the next major version. Note that these may be unstable and feedback is always appreciated if something goes wrong.
+Those who want to help test the newest features of the workflow can enable experimental updates in the `td-pref` screen. When enabled, the workflow will prompt you to update to alpha and beta releases for the next major version. Note that these may be unstable and feedback is always appreciated if something goes wrong.
 
 If you are currently using an experimental version the workflow will always prompt you to update to the latest experimental update regardless of this setting. Since fixes are common and often very important during this early stage of development it would not be good to allow old beta versions to continue misbehaving.
 
 Security
 --------
 
-Your Wunderlist password is never made available to the workflow or stored in any way. Instead, when you log in through the Wunderlist portal you are asked to authorise the workflow to access your account. 
+Your Microsoft ToDo password is never made available to the workflow or stored in any way. Instead, when you log in through the Microsoft ToDo portal you are asked to authorise the workflow to access your account. 
 
-You can log out at any time through the `wl-pref` preferences screen. Upon logging out, all caches, synced data, and workflow preferences are removed. To revert to the default workflow settings simply log out then log back in.
+You can log out at any time through the `td-pref` preferences screen. Upon logging out, all caches, synced data, and workflow preferences are removed. To revert to the default workflow settings simply log out then log back in.
 
 Limitations
 -----------
@@ -212,9 +212,11 @@ Limitations
 Contributing
 ------------
 
-So you want to help make this workflow better? That's great! After cloning the repository, run `npm install && grunt` to build the workflow. Open the Wunderlist-symlinked.alfredworkflow file to install a copy in Alfred that will update whenever you rebuild the workflow. After making a change, simply run `grunt build` to update the workflow then use Alfred to test. Using this process, the workflow is kept up-to-date while you work.
+So you want to help make this workflow better? That's great! After cloning the repository, run `npm install && grunt` to build the workflow. Open the mstodo-symlinked.alfredworkflow file to install a copy in Alfred that will update whenever you rebuild the workflow. After making a change, simply run `grunt build` to update the workflow then use Alfred to test. Using this process, the workflow is kept up-to-date while you work.
 
 Always run through the tests to ensure that your change does not cause issues elsewhere. When possible, add corresponding tests for your contributions.
+
+Yes, this runs Py2.7. No it won't be updated any time soon, particularly as it relies on Alfred-Workflow which isn't being updated until MacOS ships with Py3 as the default kernel. Complain to Apple if you like, not to me.
 
 Testing
 -------
@@ -226,11 +228,6 @@ Contributors can use the command `grunt test` to run the test suite and should d
 Acknowledgements
 ----------------
 
-This workflow relies on the fantastic [Alfred-Workflow](https://github.com/deanishe/alfred-workflow) by [Dean Jackson](https://github.com/deanishe) to communicate with Alfred. The Alfred-Workflow library source code is bundled with the workflow and also included with the repository as a submodule.
+This workflow is a weak fork of the great foundation [Alfred-Wunderlist](http://github.com/idpaterson/alfred-wunderlist-workflow) by [Ian Paterson](https://github.com/idpaterson), which itself relies on the fantastic [Alfred-Workflow](https://github.com/deanishe/alfred-workflow) by [Dean Jackson](https://github.com/deanishe) to communicate with Alfred. The Alfred-Workflow library source code is bundled with the workflow and also included with the repository as a submodule.
 
-Much of the natural language date processing is powered by [parsedatetime](https://github.com/bear/parsedatetime), a tremendously powerful date parser built by [Mike Taylor](https://github.com/bear) and various contributors. [Peewee](https://github.com/coleifer/peewee) by [Charles Leifer](https://github.com/coleifer) provides a simple interface to store and query synced data retrieved from Wunderlist using [Requests](https://github.com/kennethreitz/requests) by [Kenneth Reitz](https://github.com/kennethreitz). The source code of all three libraries is bundled with the workflow and each is included in the repository as a submodule.
-
-Alternatives
-------------
-
-* Wunderlist itself! The 6Wunderkinder team has been incorporating many of the features found in this workflow directly into the app so that you can enjoy the convenience of natural language due dates and reminders across all platforms.
+Much of the natural language date processing is powered by [parsedatetime](https://github.com/bear/parsedatetime), a tremendously powerful date parser built by [Mike Taylor](https://github.com/bear) and various contributors. [Peewee](https://github.com/coleifer/peewee) by [Charles Leifer](https://github.com/coleifer) provides a simple interface to store and query synced data retrieved from Microsoft ToDo using [Requests](https://github.com/kennethreitz/requests) by [Kenneth Reitz](https://github.com/kennethreitz). The source code of all three libraries is bundled with the workflow and each is included in the repository as a submodule.
