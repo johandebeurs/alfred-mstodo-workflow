@@ -1,5 +1,6 @@
-Microsoft ToDo Workflow for Alfred
+Microsoft ToDo Workflow for Alfred (Beta)
 ==========================
+WIP port of the great foundation [Alfred-Wunderlist](http://github.com/idpaterson/alfred-wunderlist-workflow) by [Ian Paterson](https://github.com/idpaterson). Not thoroughly tested so your PRs are welcome.
 
 Create tasks in [Microsoft ToDo](http://todo.microsoft.com) more effortlessly than ever before with this [Alfred](http://www.alfredapp.com/) workflow (requires Alfred 2 or 3 with a Powerpack license). 
 

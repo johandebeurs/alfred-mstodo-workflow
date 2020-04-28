@@ -168,7 +168,7 @@ def commit(args, modifier=None):
                                   note=task.note)
 
     if req.status_code == 201:
-        print('The new task folder was created')
+        print('The new task was created')
         # Output must be a UTF-8 encoded string
         print('The task was added to ' + task.list_title).encode('utf-8')
         if modifier == 'alt':

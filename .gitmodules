@@ -13,3 +13,9 @@
 [submodule "lib/six"]
 	path = lib/six
 	url = git@github.com:benjaminp/six.git
+[submodule "lib/futures"]
+	path = lib/futures
+	url = git@github.com:agronholm/pythonfutures.git
+[submodule "lib/requests"]
+	path = lib/requests
+	url = git@github.com:psf/requests.git
