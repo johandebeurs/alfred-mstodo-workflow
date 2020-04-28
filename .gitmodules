@@ -1,0 +1,15 @@
+[submodule "lib/parsedatetime"]
+	path = lib/parsedatetime
+	url = git@github.com:bear/parsedatetime.git
+[submodule "lib/dateutil"]
+	path = lib/dateutil
+	url = git@github.com:dateutil/dateutil.git
+[submodule "lib/alfred-workflow"]
+	path = lib/alfred-workflow
+	url = git@github.com:deanishe/alfred-workflow.git
+[submodule "lib/peewee"]
+	path = lib/peewee
+	url = git@github.com:coleifer/peewee.git
+[submodule "lib/six"]
+	path = lib/six
+	url = git@github.com:benjaminp/six.git
