@@ -1,5 +1,7 @@
-Alfred-Workflow==1.17.1
-python-dateutil
-parsedatetime
-peewee
-six
+Alfred-Workflow==1.37.2
+python-dateutil==2.4.2
+parsedatetime==1.4
+peewee==2.7.2
+futures==3.0.3
+six==1.10.0
+requests==2.23.0

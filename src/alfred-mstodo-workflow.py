@@ -5,7 +5,7 @@ import logging
 from logging.config import fileConfig
 import sys
 
-fileConfig('logging_config.ini')
+fileConfig('/Users/johan/Documents/Programming/Alfred workflows/alfred-mstodo-workflow/src/logging_config.ini')
 
 from mstodo.handlers.route import route
 from mstodo.util import workflow

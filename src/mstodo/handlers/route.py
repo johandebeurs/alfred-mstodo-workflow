@@ -2,7 +2,7 @@ import os
 import re
 
 from mstodo import icons
-from mstodo.auth import is_authorized
+from mstodo.auth import is_authorised
 from mstodo.sync import background_sync_if_necessary
 from mstodo.util import workflow
 
@@ -37,12 +37,12 @@ def route(args):
     if 'about'.find(action) == 0:
         from mstodo.handlers import about
         handler = about
-    elif not is_authorized():
+    elif not is_authorised():
         from mstodo.handlers import login
         handler = login
-    elif 'list'.find(action) == 0:
-        from mstodo.handlers import lists
-        handler = lists
+    elif 'folder'.find(action) == 0:
+        from mstodo.handlers import taskfolder
+        handler = taskfolder
     elif 'task'.find(action) == 0:
         from mstodo.handlers import task
         handler = task
@@ -92,4 +92,4 @@ def route(args):
 
             workflow().send_feedback()
 
-    #background_sync_if_necessary()
+    background_sync_if_necessary()

@@ -5,7 +5,7 @@ from workflow import MATCH_ALL, MATCH_ALLCHARS
 from peewee import OperationalError
 
 from mstodo import icons
-from mstodo.models.preferences import Preferences, DEFAULT_LIST_MOST_RECENT
+from mstodo.models.preferences import Preferences, DEFAULT_TASKFOLDER_MOST_RECENT
 from mstodo.models.user import User
 from mstodo.util import format_time, parsedatetime_calendar, relaunch_alfred, user_locale, workflow
 
@@ -102,33 +102,33 @@ def filter(args):
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
-    elif 'default_list' in args:
-        lists = workflow().stored_data('lists')
-        matching_lists = lists
+    elif 'default_folder' in args:
+        taskfolders = workflow().stored_data('taskfolders')
+        matching_taskfolders = taskfolders
 
         if len(args) > 2:
-            list_query = ' '.join(args[2:])
-            if list_query:
-                matching_lists = workflow().filter(
-                    list_query,
-                    lists,
-                    lambda l: l['title'],
+            taskfolder_query = ' '.join(args[2:])
+            if taskfolder_query:
+                matching_taskfolders = workflow().filter(
+                    taskfolder_query,
+                    taskfolders,
+                    lambda f: f['title'],
                     # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                     match_on=MATCH_ALL ^ MATCH_ALLCHARS
                 )
 
-        for i, l in enumerate(matching_lists):
+        for i, f in enumerate(matching_taskfolders):
             if i == 1:
                 workflow().add_item(
-                    'Most recently used list',
-                    'Default to the last list to which a task was added',
-                    arg='-pref default_list %d' % DEFAULT_LIST_MOST_RECENT,
+                    'Most recently used folder',
+                    'Default to the last folder to which a task was added',
+                    arg='-pref default_folder %d' % DEFAULT_TASKFOLDER_MOST_RECENT,
                     valid=True, icon=icons.RECURRENCE
                 )
-            icon = icons.INBOX if l['list_type'] == 'inbox' else icons.LIST
+            icon = icons.INBOX if f['isDefaultFolder'] else icons.LIST
             workflow().add_item(
-                l['title'],
-                arg='-pref default_list %s' % l['id'],
+                f['title'],
+                arg='-pref default_folder %s' % f['id'],
                 valid=True, icon=icon
             )
 
@@ -138,9 +138,9 @@ def filter(args):
         )
     else:
         current_user = None
-        lists = workflow().stored_data('lists')
+        taskfolders = workflow().stored_data('taskfolders')
         loc = user_locale()
-        default_list_name = 'Inbox'
+        default_folder_name = 'Tasks'
 
         try:
             current_user = User.get()
@@ -150,11 +150,11 @@ def filter(args):
             from mstodo.sync import background_sync
             background_sync()
 
-        if prefs.default_list_id == DEFAULT_LIST_MOST_RECENT:
-            default_list_name = 'Most recent list'
+        if prefs.default_taskfolder_id == DEFAULT_TASKFOLDER_MOST_RECENT:
+            default_folder_name = 'Most recent folder'
         else:
-            default_list_id = prefs.default_list_id
-            default_list_name = next((l['title'] for l in lists if l['id'] == default_list_id), 'Inbox')
+            default_taskfolder_id = prefs.default_taskfolder_id
+            default_folder_name = next((f['title'] for f in taskfolders if f['id'] == default_taskfolder_id), 'Tasks')
 
         if current_user and current_user.name:
             workflow().add_item(
@@ -182,9 +182,9 @@ def filter(args):
         )
 
         workflow().add_item(
-            'Default list',
-            u'%s    Change the default list when creating new tasks' % default_list_name,
-            autocomplete='-pref default_list ', icon=icons.LIST
+            'Default folder',
+            u'%s    Change the default folder when creating new tasks' % default_folder_name,
+            autocomplete='-pref default_folder ', icon=icons.LIST
         )
 
         workflow().add_item(
@@ -250,20 +250,20 @@ def commit(args, modifier=None):
             print('Completed tasks are now visible in the workflow')
         else:
             print('Completed tasks will not be visible in the workflow')
-    elif 'default_list' in args:
-        default_list_id = None
-        lists = workflow().stored_data('lists')
+    elif 'default_folder' in args:
+        default_taskfolder_id = None
+        taskfolders = workflow().stored_data('taskfolders')
 
         if len(args) > 2:
-            default_list_id = int(args[2])
+            default_taskfolder_id = int(args[2])
 
-        prefs.default_list_id = default_list_id
+        prefs.default_taskfolder_id = default_taskfolder_id
 
-        if default_list_id:
-            default_list_name = next((l['title'] for l in lists if l['id'] == default_list_id), 'Inbox')
-            print('Tasks will be added to your %s list by default' % default_list_name)
+        if default_taskfolder_id:
+            default_folder_name = next((f['title'] for f in taskfolders if f['id'] == default_taskfolder_id), 'Tasks')
+            print('Tasks will be added to your %s folder by default' % default_folder_name)
         else:
-            print('Tasks will be added to the Inbox by default')
+            print('Tasks will be added to the Tasks folder by default')
     elif 'explicit_keywords' in args:
         prefs.explicit_keywords = not prefs.explicit_keywords
 
@@ -318,4 +318,4 @@ def commit(args, modifier=None):
             print('The workflow will expect dates in US English')
 
     if relaunch_command:
-        relaunch_alfred('wl%s' % relaunch_command)
+        relaunch_alfred('td%s' % relaunch_command)

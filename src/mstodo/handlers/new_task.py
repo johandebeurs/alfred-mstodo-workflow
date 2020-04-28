@@ -80,19 +80,19 @@ def filter(args):
             wf.add_item(hashtag.tag[1:], '', autocomplete=' ' + task.phrase_with(hashtag=hashtag.tag) + ' ', icon=icons.HASHTAG)
 
     elif task.has_list_prompt:
-        lists = wf.stored_data('lists')
-        if lists:
-            for list in lists:
+        taskfolders = wf.stored_data('taskfolders')
+        if taskfolders:
+            for taskfolder in taskfolders:
                 # Show some full list names and some concatenated in command
                 # suggestions
-                sample_command = list['title']
+                sample_command = taskfolder['title']
                 if random() > 0.5:
                     sample_command = sample_command[:int(len(sample_command) * .75)]
-                icon = icons.INBOX if list['list_type'] == 'inbox' else icons.LIST
-                wf.add_item(list['title'], 'Assign task to this list, e.g. %s: %s' % (sample_command.lower(), task.title), autocomplete=' ' + task.phrase_with(list_title=list['title']), icon=icon)
-            wf.add_item('Remove list', 'Tasks without a list are added to the Inbox', autocomplete=' ' + task.phrase_with(list_title=False), icon=icons.CANCEL)
+                icon = icons.INBOX if taskfolder['isDefaultFolder'] else icons.LIST
+                wf.add_item(taskfolder['title'], 'Assign task to this folder, e.g. %s: %s' % (sample_command.lower(), task.title), autocomplete=' ' + task.phrase_with(list_title=taskfolder['title']), icon=icon)
+            wf.add_item('Remove folder', 'Tasks without a folder are added to the Inbox', autocomplete=' ' + task.phrase_with(list_title=False), icon=icons.CANCEL)
         elif is_running('sync'):
-            wf.add_item('Your lists are being synchronized', 'Please try again in a few moments', autocomplete=' ' + task.phrase_with(list_title=False), icon=icons.BACK)
+            wf.add_item('Your folders are being synchronized', 'Please try again in a few moments', autocomplete=' ' + task.phrase_with(list_title=False), icon=icons.BACK)
 
     # Task has an unfinished recurrence phrase
     elif task.has_recurrence_prompt:
@@ -109,7 +109,7 @@ def filter(args):
         wf.add_item('Next Week', 'e.g. due next week', autocomplete=' %s ' % task.phrase_with(due_date='due next week'), icon=icons.NEXT_WEEK)
         wf.add_item('Next Month', 'e.g. due next month', autocomplete=' %s ' % task.phrase_with(due_date='due next month'), icon=icons.CALENDAR)
         wf.add_item('Next Year', 'e.g. due next year, due April 15', autocomplete=' %s ' % task.phrase_with(due_date='due next year'), icon=icons.CALENDAR)
-        wf.add_item('Remove due date', 'Add "not due" to fix accidental dates, or see wl-pref', autocomplete=' ' + task.phrase_with(due_date=False), icon=icons.CANCEL)
+        wf.add_item('Remove due date', 'Add "not due" to fix accidental dates, or see td-pref', autocomplete=' ' + task.phrase_with(due_date=False), icon=icons.CANCEL)
 
     # Task has an unfinished reminder phrase
     elif task.has_reminder_prompt:
@@ -129,7 +129,7 @@ def filter(args):
             'alt': u'…then edit it in the ToDo app    %s' % subtitle
         }, arg='--stored-query', valid=task.title != '', icon=icons.TASK)
 
-        title = 'Change list' if task.list_title else 'Select a list'
+        title = 'Change folder' if task.list_title else 'Select a folder'
         wf.add_item(title, 'Prefix the task, e.g. Automotive: ' + task.title, autocomplete=' ' + task.phrase_with(list_title=True), icon=icons.LIST)
 
         title = 'Change the due date' if task.due_date else 'Set a due date'
@@ -155,24 +155,27 @@ def commit(args, modifier=None):
     task = _task(args)
     prefs = Preferences.current_prefs()
 
-    prefs.last_list_id = task.list_id
+    prefs.last_taskfolder_id = task.list_id
 
-    task_info = tasks.create_task(task.list_id, task.title,
+    req = tasks.create_task(task.list_id, task.title,
                                   assignee_id=task.assignee_id,
                                   recurrence_type=task.recurrence_type,
                                   recurrence_count=task.recurrence_count,
                                   due_date=task.due_date,
                                   reminder_date=task.reminder_date,
                                   starred=task.starred,
-                                  completed=task.completed,
+                                  completed=task.completed, 
                                   note=task.note)
 
-    # Output must be a UTF-8 encoded string
-    print(('The task was added to ' + task.list_title).encode('utf-8'))
-
-    if modifier == 'alt':
-        import webbrowser
-
-        webbrowser.open('ms-to-do://tasks/%d' % task_info['id'])
-
-    background_sync()
+    if req.status_code == 201:
+        print('The new task folder was created')
+        # Output must be a UTF-8 encoded string
+        print('The task was added to ' + task.list_title).encode('utf-8')
+        if modifier == 'alt':
+            import webbrowser
+            webbrowser.open('ms-to-do://search/%s' % req.json()['title'])
+        background_sync()
+    elif req.status_code > 400:
+        print(str(req.json()['error']['message']))
+    else:
+        print('Unknown API error. Please try again')

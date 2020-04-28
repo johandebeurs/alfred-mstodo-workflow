@@ -11,8 +11,8 @@ from mstodo.util import workflow, NullHandler
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
 
-#@TODO check that this exists
 db = SqliteDatabase(workflow().datadir + '/mstodo.db', threadlocals=True)
+# This writes a SQLiteDB to ~/Library/Application Support/Alfred/Workflow Data/<this workflow> 
 
 def _balance_keys_for_insert(values):
     all_keys = set()
@@ -29,11 +29,11 @@ def _balance_keys_for_insert(values):
     return balanced_values
 
 class BaseModel(Model):
-
     @classmethod
     def _api2model(cls, data):
         fields = copy(cls._meta.fields)
         model_data = {}
+        log.debug(data)
 
         # Map relationships, e.g. from user_id to user's
         for (field_name, field) in cls._meta.fields.iteritems():
@@ -54,7 +54,7 @@ class BaseModel(Model):
         # Map each data property to the correct field
         for (k, v) in data.iteritems():
             if k in fields:
-                if isinstance(fields[k], (DateTimeField, DateField, TimeField)):
+                if isinstance(fields[k], (DateTimeField, DateField, TimeField)) and v is not None:
                     model_data[fields[k].name] = parser.parse(v)
                 else:
                     model_data[fields[k].name] = v
@@ -74,7 +74,7 @@ class BaseModel(Model):
         # before any additional processing on the metadata
         def revised(item):
             id = item['id']
-            if id in instances_by_id and instances_by_id[id].revision == item['revision']:
+            if id in instances_by_id and 'changeKey' in item and instances_by_id[id].changeKey == item['changeKey']:
                 instance = instances_by_id[id]
                 del instances_by_id[id]
 
@@ -83,7 +83,7 @@ class BaseModel(Model):
                 if type(instance)._meta.expect_revisions:
                     logger = log.info
 
-                logger('Revision %d of %s is still the latest', instance.revision, instance)
+                logger('Revision %s of %s is still the latest', instance.changeKey, instance)
 
                 return False
             return True
@@ -109,7 +109,7 @@ class BaseModel(Model):
                         log.info('Syncing children of %s', instance)
                         instance._sync_children()
                     cls.update(**changed_item).where(cls.id == id).execute()
-                    log.info('Updated %s to revision %d', instance, changed_item['revision'])
+                    log.info('Updated %s to revision %s', instance, changed_item['changeKey'] if 'changeKey' in changed_item else 'N/A')
                     log.debug('with data %s', changed_item)
 
                     del changed_items[id]

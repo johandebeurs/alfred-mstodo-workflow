@@ -92,7 +92,7 @@ def format_time(time, format):
 def short_relative_formatted_date(dt):
     d = dt.date() if isinstance(dt, datetime) else dt
     today = date.today()
-    # Mar 3, 2016
+    # Mar 3, 2016. Note this is a naive date in local TZ
     date_format = '%b %d, %Y'
 
     if d == today:
@@ -107,7 +107,7 @@ def short_relative_formatted_date(dt):
 
     return dt.strftime(date_format)
 
-def relaunch_alfred(command='wl'):
+def relaunch_alfred(command='td'):
     import subprocess
 
     alfred_major_version = workflow().alfred_version.tuple[0]
@@ -120,7 +120,7 @@ def relaunch_alfred(command='wl'):
 def utc_to_local(utc_dt):
     import calendar
     
-    # get integer timestamp to avoid precision lost
+    # get integer timestamp to avoid precision lost. Returns naive local datetime
     timestamp = calendar.timegm(utc_dt.timetuple())
     local_dt = datetime.fromtimestamp(timestamp)
     return local_dt.replace(microsecond=utc_dt.microsecond)

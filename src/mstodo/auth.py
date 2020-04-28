@@ -1,57 +1,78 @@
-# from workflow import PasswordNotFound
-from mstodo import config
-from mstodo.util import relaunch_alfred, workflow
-
+from workflow import PasswordNotFound
 import json
 import logging
 import requests
-from urllib import parse
+# from urllib import parse # this is a Py3 function
+from urllib import quote_plus
+from urlparse import urlparse, parse_qs
 
-def authorize():
+from mstodo import config
+from mstodo.util import relaunch_alfred, workflow
+
+log = logging.getLogger('mstodo')
+
+def authorise():
     from multiprocessing import Process
     import webbrowser
+    workflow().store_data('auth', 'started')
 
-    # workflow().store_data('auth', 'started')
-
-    # construct auth request url
+    # construct auth request url. Replace quote_plus with parse.quote for Py3
     state = new_oauth_state()
     auth_url = (config.MS_TODO_AUTH_ROOT + "/authorize"
         "?client_id=" + config.MS_TODO_CLIENT_ID +
         "&response_type=code&response_mode=query" +
-        "&redirect_uri=" + parse.quote(config.MS_TODO_REDIRECT_URL) +
-        "&scope=" + parse.quote((' '.join(config.MS_TODO_SCOPE)).lower()) +
+        "&redirect_uri=" + quote_plus(config.MS_TODO_REDIRECT_URL) +
+        "&scope=" + quote_plus((' '.join(config.MS_TODO_SCOPE)).lower()) +
         "&state=" + state
     )
+    log.debug(auth_url)
     # start server to handle response
-    if __name__ == '__main__':
-        # freeze_support()
-        server = Process(target=await_token)
-        server.start()
-        # open browser to auth
-        webbrowser.open(auth_url)
+    server = Process(target=await_token)
+    server.start()
+    # open browser to auth
+    webbrowser.open(auth_url)
+    # Py3 ----
+    # if __name__ == '__main__':
+    #     # freeze_support()
+    #     server = Process(target=await_token)
+    #     server.start()
+    #     # open browser to auth
+    #     webbrowser.open(auth_url)
 
-def deauthorize():
+def deauthorise():
     try:
         workflow().delete_password(config.KC_OAUTH_TOKEN)
+        log.debug('Deauthorising')
     except PasswordNotFound:
         pass
 
 def is_authorised():
-    return oauth_token() is not None
+    if oauth_token() is None:
+        log.debug('Not authorised')
+        return False
+    else:
+        if workflow().cached_data('query_event', max_age=3600) is None:
+            log.debug('No auth in last 3600s, refreshing token')
+            return resolve_oauth_token(refresh_token=workflow().get_password(config.KC_REFRESH_TOKEN))
+        else: 
+            log.debug('Using cached OAuth token')
+            return True
 
-def handle_authorization_url(url):
+def handle_authorisation_url(url):
     # Parse query data & params to find out what was passed
-    parsed_url = parse.urlparse(url)
-    params = parse.parse_qs(parsed_url.query)
-    if 'code' in params: # and validate_oauth_state(params['state'][0]):
+    # parsed_url = parse.urlparse(url)
+    # params = parse.parse_qs(parsed_url.query)
+    params = parse_qs(urlparse(url).query)
+    if 'code' in params and validate_oauth_state(params['state'][0]):
+        log.debug('Valid OAuth response and state matches')
         # Request a token based on the code
         resolve_oauth_token(code=params['code'][0])
-        # workflow().store_data('auth', None)
-
+        workflow().store_data('auth', None)
+        workflow().delete_password(config.KC_OAUTH_STATE)
         print('You are now logged in')
         return True
     elif 'error' in params:
-        # workflow().store_data('auth', 'Error: %s' % params['error'])
+        workflow().store_data('auth', 'Error: %s' % params['error'])
         print('Please try again later')
         return params['error']
 
@@ -60,8 +81,7 @@ def handle_authorization_url(url):
 
 def oauth_token():
     try:
-        # return workflow().get_password(config.KC_OAUTH_TOKEN)
-        return config.OAUTH_TOKEN
+        return workflow().get_password(config.KC_OAUTH_TOKEN)
     except:
         return None
 
@@ -75,13 +95,14 @@ def oauth_state():
         return None
 
 def new_oauth_state():
+    log.debug('Creating new OAuth state')
     import random
     import string
     state_length = 20
     state = ''.join(
         random.SystemRandom().choice(string.ascii_uppercase + string.digits)
         for _ in range(state_length))
-    # workflow().save_password(config.KC_OAUTH_STATE, state)
+    workflow().save_password(config.KC_OAUTH_STATE, state)
     return state
 
 def validate_oauth_state(state):
@@ -90,58 +111,50 @@ def validate_oauth_state(state):
 def resolve_oauth_token(code=None,refresh_token=None):
     token_url = config.MS_TODO_AUTH_ROOT + "/token"
     scope = config.MS_TODO_SCOPE
-    scope.append('offline_access')
     data = {
         "client_id": config.MS_TODO_CLIENT_ID,
         "redirect_uri": config.MS_TODO_REDIRECT_URL,
         "scope": ' '.join(scope)
     }
+
     if code is not None:
+        log.debug('first grant')
         data['grant_type'] = "authorization_code"
         data['code'] = code
     elif refresh_token is not None:
+        log.debug('refeshing token')
         data['grant_type'] = "refresh_token"
-        data['code'] = refresh_token
+        data['refresh_token'] = refresh_token
     
-    logging.info('Getting token from: ' + token_url)
-    logging.info(data)
-    result = requests.post(token_url, data=data)
+    if 'grant_type' in data:
+        log.debug('Getting token from: ' + token_url)
+        result = requests.post(token_url, data=data)
+        log.debug('Auth response status: ' + str(result.status_code))
+        if 'access_token' in result.text:
+            log.debug('Saving access token in keychain')
+            workflow().save_password(config.KC_OAUTH_TOKEN, result.json()['access_token'])
+            workflow().save_password(config.KC_REFRESH_TOKEN, result.json()['refresh_token'])
+            workflow().cache_data('query_event', True)
+            return True
     
-    if 'access_token' in result.text:
-        access_token = result.json()['access_token']
-        refresh_token = result.json()['refresh_token']
-        logging.info('Access token: ' + access_token)
-        logging.info('Refesh token: ' + refresh_token)
-        config.KC_OAUTH_TOKEN = access_token
-        config.KC_REFRESH_TOKEN = refresh_token
-
-        # workflow().save_password(config.KC_OAUTH_TOKEN, access_token)
-        # workflow().save_password(config.KC_REFRESH_TOKEN, refresh_token)
-        # workflow().delete_password(config.KC_OAUTH_STATE)
+    return False
 
 def await_token():
     from http.server import HTTPServer, SimpleHTTPRequestHandler
 
     class OAuthTokenResponseHandler(SimpleHTTPRequestHandler):
         def do_GET(self):
-            auth_status = handle_authorization_url(self.path)
+            auth_status = handle_authorisation_url(self.path)
             if not auth_status:
                 self.path = 'www/' + self.path
             elif auth_status is True:
-                self.path = 'www/authorize.html'
+                self.path = 'www/authorise.html'
             else:
                 self.path = 'www/decline.html'
             SimpleHTTPRequestHandler.do_GET(self)
-            # relaunch_alfred()
+            relaunch_alfred()
 
     httpd = HTTPServer((config.OAUTH_SERVER, config.OAUTH_PORT), OAuthTokenResponseHandler)
-    # import ssl
-    # httpd.socket = ssl.wrap_socket(httpd.socket, certfile='localhost.pem', server_side=True)
     httpd.timeout = config.OAUTH_TIMEOUT
+    log.debug('Awating token on ' + config.MS_TODO_REDIRECT_URL)
     httpd.handle_request() # waits for a single call to this URL
-
-logging.basicConfig(level=logging.DEBUG)
-
-if not is_authorised():
-    logging.info("No suitable token exists in cache. Request user to sign in.")
-    authorize()

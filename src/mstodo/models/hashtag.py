@@ -15,7 +15,7 @@ class Hashtag(BaseModel):
     revision = IntegerField(default=0)
 
     @classmethod
-    def sync(cls):
+    def sync(cls, background=False):
         from mstodo.models.task import Task
 
         tasks_with_hashtags = Task.select().where(Task.title.contains('#'))

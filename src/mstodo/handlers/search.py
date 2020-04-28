@@ -1,16 +1,19 @@
 # encoding: utf-8
 
 import re
+import logging
 
 from peewee import fn, OperationalError
 from workflow import MATCH_ALL, MATCH_ALLCHARS
 
 from mstodo import icons
-from mstodo.models.list import List
+from mstodo.models.taskfolder import TaskFolder
 from mstodo.models.preferences import Preferences
 from mstodo.models.task import Task
 from mstodo.sync import background_sync
 from mstodo.util import workflow
+
+log = logging.getLogger(__name__)
 
 _hashtag_prompt_pattern = re.compile(r'#\S*$', re.UNICODE)
 
@@ -46,72 +49,71 @@ def filter(args):
 
     else:
         conditions = True
-        lists = workflow().stored_data('lists')
-        matching_lists = None
+        taskfolders = workflow().stored_data('taskfolders')
+        matching_taskfolders = None
         query = ' '.join(args[1:]).strip()
-        list_query = None
+        taskfolder_query = None
 
-        # Show all lists on the main search screen
+        # Show all task folders on the main search screen
         if not query:
-            matching_lists = lists
-        # Filter lists when colon is used
+            matching_taskfolders = taskfolders
+        # Filter task folders when colon is used
         if ':' in query:
-            matching_lists = lists
+            matching_taskfolders = taskfolders
             components = re.split(r':\s*', query, 1)
-            list_query = components[0]
-            if list_query:
-                matching_lists = workflow().filter(
-                    list_query,
-                    lists if lists else [],
-                    lambda l: l['title'],
+            taskfolder_query = components[0]
+            if taskfolder_query:
+                matching_taskfolders = workflow().filter(
+                    taskfolder_query,
+                    taskfolders if taskfolders else [],
+                    lambda f: f['title'],
                     # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                     match_on=MATCH_ALL ^ MATCH_ALLCHARS
                 )
 
-                # If no matching list search against all tasks
-                if matching_lists:
+                # If no matching task folder search against all tasks
+                if matching_taskfolders:
                     query = components[1] if len(components) > 1 else ''
 
-                # If there is a list exactly matching the query ignore
-                # anything else. This takes care of lists that are substrings
-                # of other lists
-                if len(matching_lists) > 1:
-                    for l in matching_lists:
-                        if l['title'].lower() == list_query.lower():
-                            matching_lists = [l]
+                # If there is a task folder exactly matching the query ignore
+                # anything else. This takes care of taskfolders that are substrings
+                # of other taskfolders
+                if len(matching_taskfolders) > 1:
+                    for f in matching_taskfolders:
+                        if f['title'].lower() == taskfolder_query.lower():
+                            matching_taskfolders = [f]
                             break
 
-        if matching_lists:
-            if not list_query:
+        if matching_taskfolders:
+            if not taskfolder_query:
                 wf.add_item('Browse by hashtag', autocomplete='-search #', icon=icons.HASHTAG)
 
-            if len(matching_lists) > 1:
-                for l in matching_lists:
-                    icon = icons.INBOX if l['list_type'] == 'inbox' else icons.LIST
-                    wf.add_item(l['title'], autocomplete='-search %s: ' % l['title'], icon=icon)
+            if len(matching_taskfolders) > 1:
+                for f in matching_taskfolders:
+                    icon = icons.INBOX if f['isDefaultFolder'] else icons.LIST
+                    wf.add_item(f['title'], autocomplete='-search %s: ' % f['title'], icon=icon)
             else:
-                conditions = conditions & (Task.list == matching_lists[0]['id'])
+                conditions = conditions & (Task.list == matching_taskfolders[0]['id'])
 
-        if not matching_lists or len(matching_lists) <= 1:
+        if not matching_taskfolders or len(matching_taskfolders) <= 1:
             for arg in query.split(' '):
                 if len(arg) > 1:
-                    conditions = conditions & (Task.title.contains(arg) | List.title.contains(arg))
+                    conditions = conditions & (Task.title.contains(arg) | TaskFolder.title.contains(arg))
 
             if conditions:
                 if not prefs.show_completed_tasks:
-                    conditions = Task.completed_at.is_null() & conditions
+                    conditions = (Task.status != 'completed') & conditions
 
                 tasks = Task.select().where(Task.list.is_null(False) & conditions)
 
-                # Default Wunderlist sort order reversed to show newest first
-                tasks = tasks.join(List).order_by(Task.order.desc(), List.order.asc())
+                tasks = tasks.join(TaskFolder).order_by(Task.lastModifiedDateTime.desc(), TaskFolder.changeKey.asc())
 
                 # Avoid excessive results
                 tasks = tasks.limit(50)
 
                 try:
                     for t in tasks:
-                        wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s  ' % t.id, icon=icons.TASK_COMPLETED if t.completed else icons.TASK)
+                        wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s  ' % t.id, icon=icons.TASK_COMPLETED if t.status == 'completed' else icons.TASK) 
                 except OperationalError:
                     background_sync()
 

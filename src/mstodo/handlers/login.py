@@ -18,7 +18,7 @@ def filter(args):
     if not getting_help:
         workflow().add_item(
             'Please log in',
-            'Authorize Alfred ToDo Workflow to use your Microsoft account',
+            'Authorise Alfred ToDo Workflow to use your Microsoft account',
             valid=True, icon=icons.ACCOUNT
         )
 
@@ -26,7 +26,7 @@ def filter(args):
     if getting_help:
         workflow().add_item(
             'A "localhost" page appeared in my web browser',
-            u'Paste the full link from your browser above then press return, wl:help http://localhost:6200/…',
+            u'Paste the full link from your browser above then press return, td:help http://localhost:6200/…',
             arg=' '.join(args), valid=True, icon=icons.LINK
         )
         workflow().add_item(
@@ -65,4 +65,4 @@ def commit(args, modifier=None):
         elif not auth_status:
             print('Invalid or expired URL, please try again')
     elif not command:
-        auth.authorize()
+        auth.authorise()

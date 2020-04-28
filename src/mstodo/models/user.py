@@ -1,7 +1,7 @@
 import logging
 import time
 
-from peewee import IntegerField, PrimaryKeyField, TextField
+from peewee import TextField, CharField
 
 from mstodo.models.fields import DateTimeUTCField
 from mstodo.models.base import BaseModel
@@ -12,13 +12,21 @@ log.addHandler(NullHandler())
 
 
 class User(BaseModel):
-    id = PrimaryKeyField()
-    name = TextField()
-    revision = IntegerField()
-    created_at = DateTimeUTCField()
+    id = CharField(primary_key=True)
+    name = TextField(null=True)
+    displayName = TextField(null=True)
+    givenName = TextField(null=True)
+    surname = TextField(null=True)
+    userPrincipalName = TextField(null=True)
+    mail = TextField(null=True)
+    mobilePhone = TextField(null=True)
+    jobTitle = TextField(null=True)
+    officeLocation = TextField(null=True)
+    preferredLanguage = TextField(null=True)
+    # businessPhones": [],
 
     @classmethod
-    def sync(cls):
+    def sync(cls, background=False):
         from mstodo.api import user
 
         start = time.time()

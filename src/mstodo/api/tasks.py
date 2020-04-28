@@ -1,22 +1,50 @@
-# @TODO check operation of this file and handle secondary task attributes
-
 import logging
 import time
+from dateutil import tz
+import datetime
 
 from requests import codes
-from datetime import timezone
 
 import mstodo.api.base as api
 from mstodo.util import NullHandler
+from mstodo import config
 
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
 
-NO_CHANGE = '!nochange!'
-
-def tasks(list_id, completed=False, subtasks=False, positions=None):
+def tasks_all(completed=None, since_datetime=None):
     start = time.time()
-    req = api.get('me/outlook/taskFolders/' + list_id + '/tasks?$filter=status+eq+' + '''completed''' if completed else '''notStarted''')
+    log.info(since_datetime)
+    query = '?$top='+config.MS_TODO_PAGE_SIZE+'&count=true'
+    if (completed is not None or since_datetime is not None):
+        query += '&$filter='
+        if completed == True: 
+            query += "status+eq+'completed'"
+        elif completed == False: 
+            query += "status+ne+'completed'"
+        if completed is not None: 
+            query += "&"
+        if since_datetime is not None: 
+            query += "lastModifiedDateTime+ge+" + since_datetime.isoformat()[:-4] + "Z"
+    else:
+        query += ''
+    next_link = "me/outlook/tasks" + query
+    tasks = []
+    while True:
+        req = api.get(next_link)
+        tasks.extend(req.json()['value'])
+        if '@odata.nextLink' in req.json():
+            next_link= req.json()['@odata.nextLink'].replace(config.MS_TODO_API_BASE_URL + '/','')
+        else:
+            break
+    
+    log.info('Retrieved %d %stasks in %s', len(tasks), 'completed ' if completed else '', time.time() - start)
+
+    return tasks
+
+def tasks(taskfolder_id, completed=False, subtasks=False, positions=None):
+    start = time.time()
+    req = api.get(("me/outlook/taskFolders/" + taskfolder_id + "/tasks?$filter=status+") + ("eq" if completed else "ne") + "+'completed'")
     #     ('subtasks' if subtasks else 'tasks'), {
     #     'list_id': int(list_id),
     #     'completed': completed
@@ -30,8 +58,9 @@ def tasks(list_id, completed=False, subtasks=False, positions=None):
     if subtasks:
         task_type += 'sub'
 
-    tasks = req.json()
-    log.info('Retrieved %stasks for list %d in %s', task_type, list_id, time.time() - start)
+    log.info(req.json())
+    tasks = req.json()['value']
+    log.info('Retrieved %stasks for folder %s in %s', task_type, taskfolder_id, time.time() - start)
 
     return tasks
 
@@ -64,100 +93,158 @@ def task(id):
 
     return info
 
-def create_task(list_id, title, assignee_id=None, recurrence_type=None, recurrence_count=None, due_date=None, reminder_date=None, starred=False, completed=False, note=None):
+def set_due_date(due_date):
+    due_date = datetime.datetime.combine(due_date,datetime.time(0,0,0,1)) 
+    # Microsoft ignores the time component of the API response so we don't do TZ conversion here
+    return {
+        'dueDateTime': {
+            "dateTime": due_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + 'Z',
+            "timeZone": "UTC"
+        }
+    }
+
+def set_reminder_date(reminder_date):
+    reminder_date = reminder_date.replace(tzinfo=tz.gettz())
+    return {
+        'isReminderOn': True,
+        'reminderDateTime': {
+            "dateTime": reminder_date.astimezone(tz.tzutc()).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + 'Z',
+            "timeZone": "UTC"
+        }
+    }
+
+def set_recurrence(recurrence_count, recurrence_type, due_date):
+    recurrence = {'pattern':{},'range':{}}
+    if recurrence_type == 'day': 
+        recurrence_type = 'daily'
+    elif recurrence_type == 'week': 
+        recurrence_type = 'weekly'
+        recurrence['pattern']['firstDayOfWeek'] = 'sunday'
+        recurrence['pattern']['daysOfWeek'] = [due_date.strftime('%A')]
+    elif recurrence_type == 'month': 
+        recurrence_type = 'absoluteMonthly'
+        recurrence['pattern']['dayOfMonth'] = due_date.strftime('%d')
+    elif recurrence_type == 'year': 
+        recurrence_type = 'absoluteYearly'
+        recurrence['pattern']['dayOfMonth'] = due_date.strftime('%d')
+        recurrence['pattern']['month'] = due_date.strftime('%m')
+    recurrence['pattern']['interval'] = recurrence_count
+    recurrence['pattern']['type'] = recurrence_type
+    recurrence['range'] = {
+        # "endDate": "String (timestamp)", only for endDate types
+        # "numberOfOccurrences": 1024,
+        # "recurrenceTimeZone": "string",
+        'startDate': due_date.strftime('%Y-%m-%d'),
+        'type': 'noEnd' # "endDate / noEnd / numbered"
+    }
+    return recurrence
+
+def create_task(taskfolder_id, title, assignee_id=None, recurrence_type=None, recurrence_count=None, due_date=None, reminder_date=None, starred=False, completed=False, note=None):
     params = {
         'subject': title,
         'importance': 'high' if starred else 'normal',
         'status': 'completed' if completed else 'notStarted',
-        'sensitivity': 'normal'
+        'sensitivity': 'normal',
+        'isReminderOn': False,
+        'body': {
+            'contentType':'text',
+            'content': note if note else ''
+        }
     }
+    if due_date:
+        due_date = datetime.datetime.combine(due_date,datetime.time(0,0,0,1)) 
+        # Microsoft ignores the time component of the API response so we don't do TZ conversion here
+        params['dueDateTime'] = {
+            "dateTime": due_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + 'Z',
+            "timeZone": "UTC"
+        }
+    if reminder_date:
+        reminder_date = reminder_date.replace(tzinfo=tz.gettz())
+        params['isReminderOn'] = True
+        params['reminderDateTime'] = {
+            "dateTime": reminder_date.astimezone(tz.tzutc()).strftime('%Y-%m-%dT%H:%M:%S.%f')[:-4] + 'Z',
+            "timeZone": "UTC"
+        }
+    if (recurrence_count is not None and recurrence_type is not None):
+        params['recurrence'] = {'pattern':{},'range':{}}
+        if recurrence_type == 'day': 
+            recurrence_type = 'daily'
+        elif recurrence_type == 'week': 
+            recurrence_type = 'weekly'
+            params['recurrence']['pattern']['firstDayOfWeek'] = 'sunday'
+            params['recurrence']['pattern']['daysOfWeek'] = [due_date.strftime('%A')]
+        elif recurrence_type == 'month': 
+            recurrence_type = 'absoluteMonthly'
+            params['recurrence']['pattern']['dayOfMonth'] = due_date.strftime('%d')
+        elif recurrence_type == 'year': 
+            recurrence_type = 'absoluteYearly'
+            params['recurrence']['pattern']['dayOfMonth'] = due_date.strftime('%d')
+            params['recurrence']['pattern']['month'] = due_date.strftime('%m')
+        params['recurrence']['pattern']['interval'] = recurrence_count
+        params['recurrence']['pattern']['type'] = recurrence_type
+        params['recurrence']['range'] = {
+            # "endDate": "String (timestamp)", only for endDate types
+            # "numberOfOccurrences": 1024,
+            # "recurrenceTimeZone": "string",
+            'startDate': due_date.strftime('%Y-%m-%d'),
+            'type': 'noEnd' # "endDate / noEnd / numbered"
+        }
 
     #@TODO maybe add these if required
-    params_new = {
-        "categories": ["String"],
-        "isReminderOn": True,
-        "recurrence": {
-            "pattern": {
-                "dayOfMonth": 1024,
-                "daysOfWeek": ["sunday, monday, tuesday, wednesday, thursday, friday, saturday"],
-                "firstDayOfWeek": "sunday, monday, tuesday, wednesday, thursday, friday, saturday",
-                "index": "first, second, third, fourth, last",
-                "interval": 1024,
-                "month": 1024,
-                "type": "daily, weekly, absoluteMonthly, relativeMonthly, absoluteYearly, relativeYearly"
-                },
-            "range": {
-                "endDate": "String (timestamp)",
-                "numberOfOccurrences": 1024,
-                "recurrenceTimeZone": "string",
-                "startDate": "String (timestamp)",
-                "type": "endDate / noEnd / numbered"
-                }
-            },
-        "reminderDateTime": {"@odata.type": "microsoft.graph.dateTimeTimeZone"},
-        "startDateTime": {"@odata.type": "microsoft.graph.dateTimeTimeZone"},
-    }
-
-    if note:
-        params['body'] = {
-            'contentType':'text',
-            'content': note
-        }
+    # params_new = {
+    #     "categories": ["String"],
+    #     "startDateTime": {"@odata.type": "microsoft.graph.dateTimeTimeZone"},
+    # }
 
     #@TODO check these and add back if needed
     # if assignee_id:
     #     params['assignedTo'] = int(assignee_id)
 
-    # if recurrence_type and recurrence_count:
-    #     params['recurrence_type'] = recurrence_type
-    #     params['recurrence_count'] = int(recurrence_count)
-
-    if due_date:
-        #@TODO check if this needs date = date.replace(tzinfo=tzlocal()) for tz awareness
-        params['dueDateTime'] = {
-            "dateTime": due_date.astimezone(timezone.utc).isoformat(),
-            "timeZone": "UTC"
-        }
-    
-    if reminder_date:
-        params['reminderDateTime'] = {
-            "dateTime": reminder_date.astimezone(timezone.utc).isoformat(),
-            "timeZone": "UTC"
-        }
-
-    req = api.post('me/outlook/taskFolders/' + list_id + '/tasks', params)
+    req = api.post('me/outlook/taskFolders/' + taskfolder_id + '/tasks', params)
     info = req.json()
 
-    return info
+    log.debug(req.status_code)
 
-def update_task(id, revision, title=NO_CHANGE, assignee_id=NO_CHANGE, recurrence_type=NO_CHANGE, recurrence_count=NO_CHANGE, due_date=NO_CHANGE, reminder_date=NO_CHANGE, starred=NO_CHANGE, completed=NO_CHANGE):
+    return req
+
+def update_task(id, revision, title=None, assignee_id=None, recurrence_type=None, recurrence_count=None, due_date=None, reminder_date=None, starred=None, completed=None):
     params = {}
+
+    if completed == True:
+        req = api.post('me/outlook/tasks/%s/complete',id)
+        info = req.json()
+        return info
+    elif completed == False:
+        params['status'] = 'notStarted'
+        params['completedDateTime'] = {}
+    
+    if title is not None:
+        params['subject'] = title
+    
+    if starred is not None:
+        if starred == True: params['importance'] = 'high'
+        elif starred == False: params['importance'] = 'normal'
+
+    if due_date is not None:
+        params.update(set_due_date(due_date)) 
+
+    if reminder_date is not None:
+        params.update(set_reminder_date(reminder_date)) 
+        
+    #@TODO this requires all three to be set. Need to ensure due_date is pulled from task on calling this function
+    if (recurrence_count is not None and recurrence_type is not None and due_date is not None):
+        params.update(set_recurrence(recurrence_count, recurrence_type, due_date)) 
+
+    #@TODO maybe add these if required
+    # params_new = {
+    #     "categories": ["String"],
+    #     "startDateTime": {"@odata.type": "microsoft.graph.dateTimeTimeZone"},
+    # }
+
+    #@TODO check these and add back if needed
+    # if assignee_id:
+    #     params['assignedTo'] = int(assignee_id)
     # remove = []
-    changes = {
-        'subject': title,
-        # 'assignedTo': assignee_id,
-        # 'recurrence_type': recurrence_type,
-        # 'recurrence_count': recurrence_count,
-        'due_date': due_date,
-        'starred': starred,
-        'completed': completed
-    }
-
-    for (key, value) in changes.items():
-        if value is None:
-            # remove.append(key)
-            params[key] = None
-        elif value != NO_CHANGE:
-            params[key] = value
-
-    if due_date:
-        params['dueDateTime'] = {
-            "dateTime": due_date.astimezone(timezone.utc).isoformat(),
-            "timeZone": "UTC"
-        }
-
-    # if remove:
-    #     params['remove'] = remove
 
     if params:
         req = api.patch('me/outlook/tasks/' + id, params)

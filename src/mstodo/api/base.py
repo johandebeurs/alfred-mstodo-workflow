@@ -1,5 +1,4 @@
 import json
-
 import requests
 
 from mstodo import config
@@ -38,6 +37,7 @@ def get(path, params=None):
 @_report_errors
 def post(path, data=None):
     headers = _request_headers()
+    headers['Content-Type'] = 'application/json'
     return requests.post(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,
@@ -47,6 +47,7 @@ def post(path, data=None):
 @_report_errors
 def put(path, data=None):
     headers = _request_headers()
+    headers['Content-Type'] = 'application/json'
     return requests.put(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,
@@ -56,6 +57,7 @@ def put(path, data=None):
 @_report_errors
 def patch(path, data=None):
     headers = _request_headers()
+    headers['Content-Type'] = 'application/json'
     return requests.patch(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,

@@ -1,29 +1,32 @@
 # encoding: utf-8
 
 from datetime import date, datetime, timedelta
+import logging
 
 from peewee import JOIN, OperationalError
 from workflow.background import is_running
 
 from mstodo import icons
-from mstodo.models.list import List
+from mstodo.models.taskfolder import TaskFolder
 from mstodo.models.preferences import Preferences
 from mstodo.models.task import Task
 from mstodo.sync import background_sync, background_sync_if_necessary, sync
 from mstodo.util import relaunch_alfred, workflow
 
+log = logging.getLogger('mstodo')
+
 _hashtag_prompt_pattern = r'#\S*$'
 
 _due_orders = (
     {
-        'due_order': ['order', 'due_date', 'list.order'],
-        'title': 'Most overdue within each list',
-        'subtitle': 'Sort tasks by increasing due date within lists (Default)'
+        'due_order': ['order', 'due_date', 'TaskFolder.id'],
+        'title': 'Most overdue within each folder',
+        'subtitle': 'Sort tasks by increasing due date within folders (Default)'
     },
     {
-        'due_order': ['order', '-due_date', 'list.order'],
-        'title': 'Most recently due within each list',
-        'subtitle': 'Sort tasks by decreasing due date within lists'
+        'due_order': ['order', '-due_date', 'TaskFolder.id'],
+        'title': 'Most recently due within each folder',
+        'subtitle': 'Sort tasks by decreasing due date within folders'
     },
     {
         'due_order': ['order', 'due_date'],
@@ -56,7 +59,7 @@ def filter(args):
 
     # Force a sync if not done recently or wait on the current sync
     if not prefs.last_sync or \
-       datetime.now() - prefs.last_sync > timedelta(seconds=30) or \
+       datetime.utcnow() - prefs.last_sync > timedelta(seconds=30) or \
        is_running('sync'):
         sync()
 
@@ -65,15 +68,15 @@ def filter(args):
     # Build task title query based on the args
     for arg in args[1:]:
         if len(arg) > 1:
-            conditions = conditions & (Task.title.contains(arg) | List.title.contains(arg))
+            conditions = conditions & (Task.title.contains(arg) | TaskFolder.title.contains(arg))
 
     if conditions is None:
         conditions = True
 
-    tasks = Task.select().join(List).where(
-        Task.completed_at.is_null() &
-        (Task.due_date < date.today() + timedelta(days=1)) &
-        Task.list.is_null(False) &
+    tasks = Task.select().join(TaskFolder).where(
+        (Task.status != 'completed') &
+        (Task.dueDateTime < datetime.now() + timedelta(days=1)) &
+        Task.list_id.is_null(False) &
         conditions
     )
 
@@ -86,11 +89,11 @@ def filter(args):
             key = key[1:]
 
         if key == 'due_date':
-            field = Task.due_date
-        elif key == 'list.order':
-            field = List.order
+            field = Task.dueDateTime
+        elif key == 'taskfolder.id':
+            field = TaskFolder.id
         elif key == 'order':
-            field = Task.order
+            field = Task.lastModifiedDateTime
 
         if field:
             if order == 'asc':
@@ -100,10 +103,11 @@ def filter(args):
 
     try:
         if prefs.hoist_skipped_tasks:
+            log.debug('hoisting skipped tasks')
             tasks = sorted(tasks, key=lambda t: -t.overdue_times)
 
         for t in tasks:
-            wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s ' % t.id, icon=icons.TASK_COMPLETED if t.completed else icons.TASK)
+            wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s ' % t.id, icon=icons.TASK_COMPLETED if t.status == 'completed' else icons.TASK)
     except OperationalError:
         background_sync()
 
@@ -124,13 +128,13 @@ def commit(args, modifier=None):
 
         if command == 'toggle-skipped':
             prefs.hoist_skipped_tasks = not prefs.hoist_skipped_tasks
-            relaunch_command = 'wl-due sort'
+            relaunch_command = 'td-due sort'
         else:
             try:
                 index = int(command)
                 order_info = _due_orders[index - 1]
                 prefs.due_order = order_info['due_order']
-                relaunch_command = 'wl-due '
+                relaunch_command = 'td-due '
             except IndexError:
                 pass
             except ValueError:

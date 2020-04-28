@@ -2,15 +2,15 @@ from datetime import time, timedelta
 
 from mstodo.util import workflow
 
-DEFAULT_LIST_MOST_RECENT = -1
+DEFAULT_TASKFOLDER_MOST_RECENT = -1
 
 AUTOMATIC_REMINDERS_KEY = 'automatic_reminders'
-DEFAULT_LIST_ID_KEY = 'default_list_id'
+DEFAULT_TASKFOLDER_ID_KEY = 'default_taskfolder_id'
 DUE_ORDER_KEY = 'due_order'
 EXPLICIT_KEYWORDS_KEY = 'explicit_keywords'
 HOIST_SKIPPED_TASKS_KEY = 'hoist_skipped_tasks'
 ICON_THEME_KEY = 'icon_theme'
-LAST_LIST_ID_KEY = 'last_list_id'
+LAST_TASKFOLDER_ID_KEY = 'last_taskfolder_id'
 LAST_SYNC_KEY = 'last_sync'
 PRERELEASES_KEY = '__workflow_prereleases'
 REMINDER_TIME_KEY = 'reminder_time'
@@ -136,12 +136,12 @@ class Preferences(object):
         workflow().settings[PRERELEASES_KEY] = prerelease_channel
 
     @property
-    def last_list_id(self):
-        return self._get(LAST_LIST_ID_KEY, None)
+    def last_taskfolder_id(self):
+        return self._get(LAST_TASKFOLDER_ID_KEY, None)
 
-    @last_list_id.setter
-    def last_list_id(self, last_list_id):
-        self._set(LAST_LIST_ID_KEY, last_list_id)
+    @last_taskfolder_id.setter
+    def last_taskfolder_id(self, last_taskfolder_id):
+        self._set(LAST_TASKFOLDER_ID_KEY, last_taskfolder_id)
 
     @property
     def last_sync(self):
@@ -153,7 +153,7 @@ class Preferences(object):
 
     @property
     def due_order(self):
-        return self._get(DUE_ORDER_KEY, ['order', 'due_date', 'list.order'])
+        return self._get(DUE_ORDER_KEY, ['order', 'due_date', 'taskfolder.order'])
 
     @due_order.setter
     def due_order(self, due_order):
@@ -192,12 +192,12 @@ class Preferences(object):
         self._set(COMPLETED_DURATION_KEY, completed_duration)
 
     @property
-    def default_list_id(self):
-        return self._get(DEFAULT_LIST_ID_KEY, None)
+    def default_taskfolder_id(self):
+        return self._get(DEFAULT_TASKFOLDER_ID_KEY, None)
 
-    @default_list_id.setter
-    def default_list_id(self, default_list_id):
-        self._set(DEFAULT_LIST_ID_KEY, default_list_id)
+    @default_taskfolder_id.setter
+    def default_taskfolder_id(self, default_taskfolder_id):
+        self._set(DEFAULT_TASKFOLDER_ID_KEY, default_taskfolder_id)
 
     @property
     def date_locale(self):

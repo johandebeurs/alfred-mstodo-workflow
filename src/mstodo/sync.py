@@ -8,9 +8,12 @@ from workflow.background import is_running
 from mstodo.models.preferences import Preferences
 from mstodo.util import workflow
 
+import logging
+log = logging.getLogger('mstodo')
 
 def sync(background=False):
-    from mstodo.models import base, root, list, task, user, hashtag, reminder
+    log.info('running mstodo/sync')
+    from mstodo.models import base, task, user, taskfolder, hashtag
     from peewee import OperationalError
 
     # If a sync is already running, wait for it to finish. Otherwise, store
@@ -28,19 +31,16 @@ def sync(background=False):
             return False
 
         pidfile = workflow().cachefile('sync.pid')
-
         with open(pidfile, 'wb') as file_obj:
             file_obj.write('{0}'.format(os.getpid()))
 
-    Preferences.current_prefs().last_sync = datetime.now()
+    Preferences.current_prefs().last_sync = datetime.utcnow()
 
     base.BaseModel._meta.database.create_tables([
-        root.Root,
-        list.List,
+        taskfolder.TaskFolder,
         task.Task,
         user.User,
-        hashtag.Hashtag,
-        reminder.Reminder
+        hashtag.Hashtag
     ], safe=True)
 
     # Perform a query that requires the latest schema; if it fails due to a
@@ -58,13 +58,21 @@ def sync(background=False):
         return
 
     first_sync = False
-
+    
     try:
-        root.Root.get()
-    except root.Root.DoesNotExist:
+        # this tries to retrieve the data from the database. If it doesn't exist then make this the first sync. 
+        user.User.get()
+    except user.User.DoesNotExist:
         first_sync = True
+        # Overwrite last datetime with yr 2000 to capture 99% of cases
+        Preferences.current_prefs().last_sync = datetime(2000,1,1,0,0,0,1) 
+        notify('Please wait...', 'The workflow is syncing tasks for the first time')
+    log.debug('First sync: ' + str(first_sync))
+    log.debug(Preferences.current_prefs().last_sync)
 
-    root.Root.sync(background=background)
+    user.User.sync(background=background)
+    taskfolder.TaskFolder.sync(background=background)
+    task.Task.sync_modified_tasks(background=background)
 
     if background:
         if first_sync:
@@ -95,5 +103,5 @@ def background_sync_if_necessary(seconds=30):
 
     # Avoid syncing on every keystroke, background_sync will also prevent
     # multiple concurrent syncs
-    if last_sync is None or (datetime.now() - last_sync).total_seconds() > seconds:
+    if last_sync is None or (datetime.utcnow() - last_sync).total_seconds() > seconds:
         background_sync()

@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 
 from workflow import MATCH_ALL, MATCH_ALLCHARS
 
-from mstodo.models.preferences import Preferences, DEFAULT_LIST_MOST_RECENT
+from mstodo.models.preferences import Preferences, DEFAULT_TASKFOLDER_MOST_RECENT
 from mstodo.util import parsedatetime_calendar, workflow
 
 # Up to 8 words (sheesh!) followed by a colon
@@ -93,7 +93,7 @@ class TaskParser(object):
         phrase = self.phrase
         cal = parsedatetime_calendar()
         wf = workflow()
-        lists = wf.stored_data('lists')
+        taskfolders = wf.stored_data('taskfolders')
         prefs = Preferences.current_prefs()
         ignore_due_date = False
 
@@ -121,20 +121,20 @@ class TaskParser(object):
             phrase = phrase[:match.start()] + phrase[match.end():]
 
         match = re.search(LIST_TITLE_PATTERN, phrase)
-        if lists and match:
+        if taskfolders and match:
             if match.group(1):
-                matching_lists = wf.filter(
+                matching_taskfolders = wf.filter(
                     match.group(1),
-                    lists,
+                    taskfolders,
                     lambda l: l['title'],
                     # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                     match_on=MATCH_ALL ^ MATCH_ALLCHARS
                 )
 
                 # Take the first match as the desired list
-                if matching_lists:
-                    self.list_id = matching_lists[0]['id']
-                    self.list_title = matching_lists[0]['title']
+                if matching_taskfolders:
+                    self.list_id = matching_taskfolders[0]['id']
+                    self.list_title = matching_taskfolders[0]['title']
             # The list name was empty
             else:
                 self.has_list_prompt = True
@@ -322,41 +322,41 @@ class TaskParser(object):
                 # Just a couple characters are too likely to result in a false
                 # positive, but allow it if the letters are capitalized
                 if len(subphrase) > 2 or subphrase == subphrase.upper():
-                    matching_lists = wf.filter(
+                    matching_taskfolders = wf.filter(
                         subphrase,
-                        lists,
-                        lambda l: l['title'],
+                        taskfolders,
+                        lambda f: f['title'],
                         # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                         match_on=MATCH_ALL ^ MATCH_ALLCHARS
                     )
 
                     # Take the first match as the desired list
-                    if matching_lists:
-                        self.list_id = matching_lists[0]['id']
-                        self.list_title = matching_lists[0]['title']
+                    if matching_taskfolders:
+                        self.list_id = matching_taskfolders[0]['id']
+                        self.list_title = matching_taskfolders[0]['title']
                         self._list_phrase = match.group() + subphrase
                         phrase = phrase[:match.start()]
                         break
 
         # No list parsed, assign to inbox
         if not self.list_title:
-            if prefs.default_list_id and lists:
-                if prefs.default_list_id == DEFAULT_LIST_MOST_RECENT:
-                    self.list_id = prefs.last_list_id
+            if prefs.default_taskfolder_id and taskfolders:
+                if prefs.default_taskfolder_id == DEFAULT_TASKFOLDER_MOST_RECENT:
+                    self.list_id = prefs.last_taskfolder_id
                 else:
-                    self.list_id = prefs.default_list_id
-                default_list = next((l for l in lists if l['id'] == self.list_id), None)
-                if default_list:
-                    self.list_title = default_list['title']
+                    self.list_id = prefs.default_taskfolder_id
+                default_taskfolder = next((f for f in taskfolders if f['id'] == self.list_id), None)
+                if default_taskfolder:
+                    self.list_title = default_taskfolder['title']
 
             if not self.list_title:
-                if lists:
-                    inbox = lists[0]
+                if taskfolders:
+                    inbox = taskfolders[0]
                     self.list_id = inbox['id']
                     self.list_title = inbox['title']
                 else:
                     self.list_id = 0
-                    self.list_title = 'Inbox'
+                    self.list_title = 'Tasks'
 
         # Set an automatic reminder when there is a due date without a
         # specified reminder

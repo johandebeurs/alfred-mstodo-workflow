@@ -17,7 +17,7 @@ def filter(args):
     )
 
 def commit(args, modifier=None):
-    auth.deauthorize()
+    auth.deauthorise()
     util.workflow().clear_data()
     util.workflow().clear_cache()
 

@@ -33,14 +33,14 @@ def filter(args):
 
     workflow().add_item(
         'Find and update tasks',
-        'Search or browse by list',
+        'Search or browse by folder',
         autocomplete='-search ',
         icon=icons.SEARCH
     )
 
     workflow().add_item(
-        'New list',
-        autocomplete='-list ',
+        'New folder',
+        autocomplete='-folder ',
         icon=icons.LIST_NEW
     )
 

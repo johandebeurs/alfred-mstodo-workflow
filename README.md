@@ -199,7 +199,7 @@ If you are currently using an experimental version the workflow will always prom
 Security
 --------
 
-Your Wunderlist password is never made available to the workflow or stored in any way. Instead, when you log in through the Wunderlist portal you are asked to authorize the workflow to access your account. 
+Your Wunderlist password is never made available to the workflow or stored in any way. Instead, when you log in through the Wunderlist portal you are asked to authorise the workflow to access your account. 
 
 You can log out at any time through the `wl-pref` preferences screen. Upon logging out, all caches, synced data, and workflow preferences are removed. To revert to the default workflow settings simply log out then log back in.
 

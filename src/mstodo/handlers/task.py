@@ -29,7 +29,7 @@ def filter(args):
     else:
         subtitle = task.subtitle()
 
-        if task.completed:
+        if task.status == 'completed':
             wf.add_item('Mark task not completed', subtitle, modifier_subtitles={
             }, arg=' '.join(args + ['toggle-completion']), valid=True, icon=icons.TASK_COMPLETED)
         else:
@@ -39,7 +39,7 @@ def filter(args):
 
         wf.add_item('View in ToDo', 'View and edit this task in the ToDo app', arg=' '.join(args + ['view']), valid=True, icon=icons.OPEN)
 
-        if task.recurrence_type and not task.completed:
+        if task.recurrence_type and not task.status == 'completed':
             wf.add_item('Delete', 'Delete this task and cancel recurrence', arg=' '.join(args + ['delete']), valid=True, icon=icons.TRASH)
         else:
             wf.add_item('Delete', 'Delete this task', arg=' '.join(args + ['delete']), valid=True, icon=icons.TRASH)
@@ -60,15 +60,15 @@ def commit(args, modifier=None):
         if modifier == 'alt':
             due_date = date.today()
 
-        if task.completed:
-            tasks.update_task(task.id, task.revision, completed=False, due_date=due_date)
+        if task.status == 'completed':
+            tasks.update_task(task.id, task.changeKey, completed=False, due_date=due_date)
             print('The task was marked incomplete')
         else:
-            tasks.update_task(task.id, task.revision, completed=True, due_date=due_date)
+            tasks.update_task(task.id, task.changeKey, completed=True, due_date=due_date)
             print('The task was marked complete')
 
     elif action == 'delete':
-        if tasks.delete_task(task.id, task.revision):
+        if tasks.delete_task(task.id, task.changeKey):
             print('The task was deleted')
         else:
             print('Please try again')
@@ -76,6 +76,6 @@ def commit(args, modifier=None):
     elif action == 'view':
         import webbrowser
 
-        webbrowser.open('ms-to-do://tasks/%d' % task.id)
+        webbrowser.open('ms-to-do://search/%s' % task.title)
 
     background_sync()

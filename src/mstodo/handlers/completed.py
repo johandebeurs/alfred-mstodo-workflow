@@ -7,9 +7,8 @@ from workflow.background import is_running
 
 from mstodo import icons
 from mstodo.models.preferences import Preferences
-from mstodo.models.reminder import Reminder
 from mstodo.models.task import Task
-from mstodo.models.list import List
+from mstodo.models.taskfolder import TaskFolder
 from mstodo.sync import background_sync, background_sync_if_necessary, sync
 from mstodo.util import relaunch_alfred, workflow
 
@@ -92,7 +91,7 @@ def filter(args):
 
     # Force a sync if not done recently or join if already running
     if not prefs.last_sync or \
-       datetime.now() - prefs.last_sync > timedelta(seconds=30) or \
+       datetime.utcnow() - prefs.last_sync > timedelta(seconds=30) or \
        is_running('sync'):
         sync()
 
@@ -103,22 +102,21 @@ def filter(args):
     # Build task title query based on the args
     for arg in args[1:]:
         if len(arg) > 1:
-            conditions = conditions & (Task.title.contains(arg) | List.title.contains(arg))
+            conditions = conditions & (Task.title.contains(arg) | TaskFolder.title.contains(arg))
 
     if conditions is None:
         conditions = True
 
-    tasks = Task.select().join(List).where(
-        (Task.completed_at > date.today() - timedelta(days=duration_info['days'])) & 
+    tasks = Task.select().join(TaskFolder).where(
+        (Task.completedDateTime > date.today() - timedelta(days=duration_info['days'])) & 
         Task.list.is_null(False) &
         conditions
     )\
-        .join(Reminder, JOIN.LEFT_OUTER, on=Reminder.task == Task.id)\
-        .order_by(Task.completed_at.desc(), Reminder.date.asc(), Task.order.asc())
+        .order_by(Task.completedDateTime.desc(), Task.reminderDateTime.asc(), Task.changeKey.asc())
 
     try:
         for t in tasks:
-            wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s ' % t.id, icon=icons.TASK_COMPLETED if t.completed else icons.TASK)
+            wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s ' % t.id, icon=icons.TASK_COMPLETED if t.status == 'completed' else icons.TASK)
     except OperationalError:
         background_sync()
 
@@ -133,7 +131,7 @@ def commit(args, modifier=None):
     action = args[1]
 
     if action == 'duration':
-        relaunch_command = 'wl-completed '
+        relaunch_command = 'td-completed '
         prefs.completed_duration = int(args[2])
 
     if relaunch_command:
