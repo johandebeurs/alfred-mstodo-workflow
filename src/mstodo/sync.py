@@ -34,7 +34,6 @@ def sync(background=False):
         with open(pidfile, 'wb') as file_obj:
             file_obj.write('{0}'.format(os.getpid()))
 
-    Preferences.current_prefs().last_sync = datetime.utcnow()
 
     base.BaseModel._meta.database.create_tables([
         taskfolder.TaskFolder,
@@ -62,6 +61,7 @@ def sync(background=False):
     try:
         # this tries to retrieve the data from the database. If it doesn't exist then make this the first sync. 
         user.User.get()
+        Preferences.current_prefs().last_sync = datetime.utcnow()
     except user.User.DoesNotExist:
         first_sync = True
         # Overwrite last datetime with yr 2000 to capture 99% of cases

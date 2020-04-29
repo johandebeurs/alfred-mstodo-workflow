@@ -142,8 +142,8 @@ class Task(BaseModel):
         instances = []
         tasks_data = []
 
-        # Remove 60 seconds to account for clock sync issues between server and local machine
-        since_datetime = Preferences.current_prefs().last_sync - timedelta(seconds=60)
+        # Remove 360 seconds to make sure all recent tasks are included
+        since_datetime = Preferences.current_prefs().last_sync - timedelta(seconds=360)
 
         with futures.ThreadPoolExecutor(max_workers=4) as executor:
             job = executor.submit(tasks.tasks_all, since_datetime=since_datetime)

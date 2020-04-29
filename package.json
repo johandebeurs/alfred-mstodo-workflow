@@ -1,6 +1,6 @@
 {
   "name": "alfred-mstodo-workflow",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "dependencies": {},
   "private": true,
   "devDependencies": {
@@ -22,7 +22,7 @@
     "grunt-text-replace": "~0.4.0",
     "jshint-stylish": "~1.0.1",
     "load-grunt-tasks": "~3.1.0",
-    "lodash": "~3.3.1",
+    "lodash": "~4.17.13",
     "time-grunt": "~1.1.0"
   },
   "engines": {

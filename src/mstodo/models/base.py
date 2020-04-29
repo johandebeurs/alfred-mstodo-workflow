@@ -11,7 +11,7 @@ from mstodo.util import workflow, NullHandler
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
 
-db = SqliteDatabase(workflow().datadir + '/mstodo.db', threadlocals=True)
+db = SqliteDatabase(workflow().datadir + '/mstodo.db')
 # This writes a SQLiteDB to ~/Library/Application Support/Alfred/Workflow Data/<this workflow> 
 
 def _balance_keys_for_insert(values):

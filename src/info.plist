@@ -516,17 +516,17 @@ security delete-generic-password -s com.johandebeurs.alfred.mstodo -a oauth_toke
 		</dict>
 	</array>
 	<key>readme</key>
-	<string>New in version 0.1.1:
+	<string>New in version 0.1.2:
   * First release
 
 More details:
-https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.1
+https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.2
 
 
 The 0.1 release is a first port of https://github.com/idpaterson/alfred-mstodo-workflow/ to the Wunderlist replacement, Microsoft ToDo
 
 More details:
-https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.1</string>
+https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.2</string>
 	<key>uidata</key>
 	<dict>
 		<key>06482847-7F21-4C57-88BB-B642E0182781</key>
@@ -622,7 +622,7 @@ https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.1</strin
 		</dict>
 	</dict>
 	<key>version</key>
-	<string>0.1.1</string>
+	<string>0.1.2</string>
 	<key>webaddress</key>
 	<string>https://github.com/johandebeurs/alfred-mstodo-workflow</string>
 </dict>
