@@ -1,8 +1,6 @@
 Microsoft ToDo Workflow for Alfred (Beta)
 ==========================
-WIP port of the great foundation [Alfred-Wunderlist](http://github.com/idpaterson/alfred-wunderlist-workflow) by [Ian Paterson](https://github.com/idpaterson). Not thoroughly tested so your PRs are welcome.
-
-Create tasks in [Microsoft ToDo](http://todo.microsoft.com) more effortlessly than ever before with this [Alfred](http://www.alfredapp.com/) workflow (requires Alfred 2 or 3 with a Powerpack license). 
+Work-in-progress [Alfred](http://www.alfredapp.com/) workflow for [Microsoft ToDo](http://todo.microsoft.com) (requires Alfred 2 or 3 with a Powerpack license).
 
 Beginner and advanced approaches to adding a monthly repeating task beginning the following week:
 
@@ -229,6 +227,6 @@ Contributors can use the command `grunt test` to run the test suite and should d
 Acknowledgements
 ----------------
 
-This workflow is a weak fork of the great foundation [Alfred-Wunderlist](http://github.com/idpaterson/alfred-wunderlist-workflow) by [Ian Paterson](https://github.com/idpaterson), which itself relies on the fantastic [Alfred-Workflow](https://github.com/deanishe/alfred-workflow) by [Dean Jackson](https://github.com/deanishe) to communicate with Alfred. The Alfred-Workflow library source code is bundled with the workflow and also included with the repository as a submodule.
+This workflow is a fork of the great foundation [Alfred-Wunderlist](http://github.com/idpaterson/alfred-wunderlist-workflow) by [Ian Paterson](https://github.com/idpaterson), which itself relies on the fantastic [Alfred-Workflow](https://github.com/deanishe/alfred-workflow) by [Dean Jackson](https://github.com/deanishe) to communicate with Alfred. The Alfred-Workflow library source code is bundled with the workflow and also included with the repository as a submodule.
 
 Much of the natural language date processing is powered by [parsedatetime](https://github.com/bear/parsedatetime), a tremendously powerful date parser built by [Mike Taylor](https://github.com/bear) and various contributors. [Peewee](https://github.com/coleifer/peewee) by [Charles Leifer](https://github.com/coleifer) provides a simple interface to store and query synced data retrieved from Microsoft ToDo using [Requests](https://github.com/kennethreitz/requests) by [Kenneth Reitz](https://github.com/kennethreitz). The source code of all three libraries is bundled with the workflow and each is included in the repository as a submodule.
