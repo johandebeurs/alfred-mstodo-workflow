@@ -4,7 +4,7 @@ Work-in-progress [Alfred](http://www.alfredapp.com/) workflow for [Microsoft ToD
 
 Beginner and advanced approaches to adding a monthly repeating task beginning the following week:
 
-![Simple and advanced usage](https://cloud.githubusercontent.com/assets/507058/7975455/ff5acaea-0a3b-11e5-93f9-74b4b14039dc.gif)
+![Simple and advanced usage](screenshots/td-combined.gif)
 
 ----------
 
@@ -25,24 +25,24 @@ The workflow provides an easy guided experience with tips along the way that wil
 
 The welcome screen appears when you've typed `td` (and nothing else). Special commands are in the form `td-command` with no space; once you type a space after `td ` you're in task entry mode. Partial commands are matched, so rather than typing `td-upcoming` to get to the Upcoming tasks list you can type as little as `td-up` or even `tdu`.
 
-![Welcome screen](https://cloud.githubusercontent.com/assets/507058/18088099/92f50464-6e86-11e6-9706-d9f4d903dc4d.png)
+![Welcome screen](screenshots/td-welcome.png)
 
 
 ### Adding tasks with due dates and recurrence
 
 Add your first task! As you type, the workflow will pick out due dates and recurrence intervals in just about any format you could think of. Just write naturally, the due date, recurrence, and task text are updated in Alfred as you type.
 
-![Task with due date and recurrence](https://cloud.githubusercontent.com/assets/507058/11858336/bbcb7c1a-a42e-11e5-85f6-414aa82fcbbb.png)
+![Task with due date and recurrence](screenshots/td_recurring.png)
 
 Use the menus to configure your task until you become a power user capable of typing everything manually. It's so worthwhile to be able to drop tasks into Microsoft ToDo in under a second.
 
-![Due date menu](https://cloud.githubusercontent.com/assets/507058/7895423/d67861e4-065a-11e5-95fa-2bedeb70432b.png)
+![Due date menu](screenshots/td-due.png)
 
 ### Adding tasks to a specific list
 
 To select a list, type it first followed by a colon or use the Change list menu item. No need to type the full list name, as long as you see the correct list in Alfred a few letters is usually sufficient. You can also set a [default list](#default-list) or default to the most recently used list.
 
-![List by substring matching](https://cloud.githubusercontent.com/assets/507058/11858365/e43c56d8-a42e-11e5-9ec6-4494579525a0.png)
+![List by substring matching](td_new-within-list.png)
 
 You can also select a list *after* typing your task with the "in" keyword. To avoid false positives you will need to use all-caps in order to match a list by typing fewer than 3 characters.
 
@@ -50,15 +50,15 @@ You can also select a list *after* typing your task with the "in" keyword. To av
 
 > <strong>td h:Fix the broken step saturday morning*</strong>
 >
-> ![td h:Fix the broken step saturday morning*](https://cloud.githubusercontent.com/assets/507058/11939350/90d6001a-a7ef-11e5-9823-3273f611599c.png)
+> ![td h:Fix the broken step saturday morning*](screenshots/td_new7.png)
 >
 > **td Buy clicky keyboard in shopping due sat**
 >
-> ![Buy clicky keyboard in sho due sat](https://cloud.githubusercontent.com/assets/507058/11939279/ffefa6f0-a7ee-11e5-9b7f-f5b1d55747a0.png)
+> ![Buy clicky keyboard in sho due sat](screenshots/td_new6.png)
 
 > **td Rearrange file cabinet tomorrow in WO**
 >
-> ![td Rearrange file cabinet tomorrow in WO](https://cloud.githubusercontent.com/assets/507058/11939280/0244f108-a7ef-11e5-8d0d-726bb5e773d5.png)
+> ![td Rearrange file cabinet tomorrow in WO](screenshots/td_new5.png)
 
 
 ### Reminders
@@ -69,23 +69,19 @@ Microsoft ToDo uses alerts to remind you about tasks that are due, either on the
 
 > **td Pay DoubleCash credit card bill monthly June 26th remind me June 22**
 >
-> ![td Pay DoubleCash credit card bill monthly June 26th remind me June 22](https://cloud.githubusercontent.com/assets/507058/8271997/4779e33e-1800-11e5-91f4-55867bf1473a.png)
+> ![td Pay DoubleCash credit card bill monthly June 26th remind me June 22](screenshots/td_new4.png)
 >
 > **td Make a New Year's resolution reminder: Jan 1 at midnight**
 >
-> ![td Make a New Year's resolution reminder: Jan 1 at midnight](https://cloud.githubusercontent.com/assets/507058/8272030/c21fa028-1801-11e5-812a-fc66e4b9a232.png)
+> ![td Make a New Year's resolution reminder: Jan 1 at midnight](screenshots/td_new3.png)
 >
 > **td weekly meeting notes r 8am due 1d**
 >
-> ![td weekly meeting notes r 8am due 1d](https://cloud.githubusercontent.com/assets/507058/8272020/5b49fd8a-1801-11e5-9d27-9851a8385bdc.png)
->
-> **td Laundry remind me**
->
-> ![td Laundry remind me](https://cloud.githubusercontent.com/assets/507058/8272070/6c15c502-1803-11e5-9a17-ed65b1a98f20.png)
+> ![td weekly meeting notes r 8am due 1d](screenshots/td_new2.png)
 >
 > **td Ask about app icon at dinner tomorrow**
 >
-> ![td Ask about app icon at dinner tomorrow](https://cloud.githubusercontent.com/assets/507058/11858195/5593905a-a42d-11e5-8e66-9b27afb31f23.png)
+> ![td Ask about app icon at dinner tomorrow](screenshots/td_new1.png)
 
 #### When is the reminder?
 
@@ -109,41 +105,41 @@ Search and browse tasks
 The `td-search` command allows you to search tasks by keyword or browse by list. To seach within a list, use the same *td-search My List: some query* syntax as when entering a task.
 
 #### Default search view
-![search](https://cloud.githubusercontent.com/assets/507058/14915653/9e9716d6-0de2-11e6-8cc6-b098136752fd.png)
+![search](screenshots/td-search.png)
 
 #### View a list
-![view list](https://cloud.githubusercontent.com/assets/507058/13865584/3023b66c-ec83-11e5-936c-45950ed8bf4d.png)
+![view list](screenshots/td-search_by-list.png)
 
 #### Search within a list
-![search list](https://cloud.githubusercontent.com/assets/507058/13865587/3bba2696-ec83-11e5-990f-890cb6eba9d1.png)
+![search list](screenshots/td-search_within-list.png)
 
 #### Search across all lists
 
 Your search will match against tasks as well as list names.
 
-![search](https://cloud.githubusercontent.com/assets/507058/13865628/a6fe572e-ec83-11e5-9d4f-4362178787bc.png)
+![search](screenshots/td-search_xfolder.png)
 
 #### Browse tasks by hashtag
 
 Type the hash symbol # to view and select a tag.
 
-![hashtags](https://cloud.githubusercontent.com/assets/507058/14915934/737bc60c-0de4-11e6-854d-fe1774d653e9.png)
+![hashtags](screenshots/td-search_hashtag.png)
 
 ### Upcoming tasks
 
 View upcoming tasks at `td-upcoming`. It's one half of the Planned list in Microsoft ToDo with the option to choose the duration that you prefer to look ahead (1 week, 2 weeks, 1 month, 3 days, whatever...). Like any other screen you can get there by typing as little as the first letter of the command: `tdu`:
 
-![upcoming tasks](https://cloud.githubusercontent.com/assets/507058/17914990/9d5dbb88-6974-11e6-9fd4-592951703b09.png)
+![upcoming tasks](screenshots/td-upcoming.png)
 
 Browse or type to search your upcoming tasks. This screen can show upcoming tasks for any number of days with a few sensible defaults. Maybe there is someone out there who needs to see exactly 11 days ahead.
 
-![upcoming duration](https://cloud.githubusercontent.com/assets/507058/17915036/2ce004b4-6975-11e6-8405-3793c005c21d.png)
+![upcoming duration](screenshots/td-upcoming_duration-custom.png)
 
 ### Due and overdue tasks
 
 The `td-due` command shows tasks that are due or overdue, similar the other half of the Planned list in Microsoft ToDo. By default it hoists any recurring tasks that are *multiple times overdue* to the top, but you can change the sort order. Sadly, I have quite a few tasks that are multiple times overdue, so this feature is mostly to keep me motivated but I hope others find it useful as well.
 
-![due and overdue tasks](https://cloud.githubusercontent.com/assets/507058/18151270/e843b1aa-6fbb-11e6-9973-d35442d755f9.png)
+![due and overdue tasks](screenshots/td-due.png)
 
 This view is searchable, just type to filter the results by keyword.
 
@@ -156,7 +152,7 @@ Editing tasks
 
 Tasks can be completed or deleted directly from the workflow. Simply find a task through the search, due, or overdue screens. Task editing is currently limited to completing and deleting tasks.
 
-![edit a task](https://cloud.githubusercontent.com/assets/507058/18151002/4b8851b0-6fb9-11e6-9665-865ad99d2c91.png)
+![edit a task](screenshots/td-task_complete.png)
 
 Overdue recurring tasks can be set due today to adjust the next occurrence by holding the <kbd>alt</kbd> key while marking a task complete. For example, if you are supposed to water the plants every 3 days but forget and do it 2 days late, you don't need to water them again the following day.
 
@@ -166,7 +162,7 @@ Any task can be opened in the Microsoft ToDo desktop app for further editing. Th
 
 You can also open a new task in Microsoft ToDo by holding down the <kbd>alt</kbd> key when creating the task.
 
-![view in Microsoft ToDo](https://cloud.githubusercontent.com/assets/507058/18151510/b95ec238-6fbd-11e6-99d8-e5215574a8a2.png)
+![view in Microsoft ToDo](screenshots/td-task_detail.png)
 
 Hints
 -----
@@ -181,13 +177,13 @@ Commands like `td:list` and `td:pref` have been changed to `td-list` and `td-pre
 
 There is an option in `td-pref` to set a list other than Tasks as the default when entering tasks. This will save keystrokes when entering a large number of tasks into a list or when a custom list is preferred over Tasks. You can also elect to use the previously-used list to facilitate entry of multiple tasks in the same list.
 
-![default list](https://cloud.githubusercontent.com/assets/507058/18149679/ace487e4-6faf-11e6-98df-103381833788.png)
+![default list](screenshots/td-prefs.png)
 
 ### Changelog
 
 If you notice any problems or want to see what changed in the latest version, jump to the *About* screen from the main menu or type `td-about`. 
 
-![About screen](https://cloud.githubusercontent.com/assets/507058/18151547/129e48f0-6fbe-11e6-892e-ba6d8a8461da.png)
+![About screen](screenshots/td-about.png)
 
 ### Experimental updates
 
