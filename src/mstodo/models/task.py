@@ -131,6 +131,43 @@ class Task(BaseModel):
         log.info('Completed updates to tasks in %s in %s', taskfolder, time.time() - start)
 
         return None
+    
+    @classmethod
+    def sync_all_tasks(cls, background=False):
+        from mstodo.api import tasks
+        from concurrent import futures
+        from mstodo.models.preferences import Preferences
+        from mstodo.models.hashtag import Hashtag
+        start = time.time()
+        instances = []
+        tasks_data = []
+
+        with futures.ThreadPoolExecutor(max_workers=4) as executor:
+            job = executor.submit(tasks.tasks_all)
+            tasks_data = job.result()
+
+        log.info('Retrieved all %d tasks in %s', len(tasks_data), time.time() - start)
+        start = time.time()
+
+        try:
+            # Pull instances from DB where task ID is in tasksdata returned from API
+            task_ids = [task['id'] for task in tasks_data]
+            instances = cls.select(cls.id, cls.title, cls.changeKey) #\
+                # .where(cls.id.in_(task_ids))
+        except PeeweeException:
+            pass
+
+        log.info('Loaded all %d tasks from the database in %s', len(instances), time.time() - start)
+        start = time.time()
+
+        tasks_data = cls.transform_datamodel(tasks_data)
+        cls._perform_updates(instances, tasks_data)
+
+        Hashtag.sync(background=background)
+
+        log.info('Completed updates to tasks in %s', time.time() - start)
+
+        return None
 
     @classmethod
     def sync_modified_tasks(cls, background=False):

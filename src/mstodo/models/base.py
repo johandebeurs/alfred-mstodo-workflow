@@ -68,6 +68,7 @@ class BaseModel(Model):
     @classmethod
     def _perform_updates(cls, model_instances, update_items):
         start = time.time()
+        # This creates a dict of all records within the database, indexable by id
         instances_by_id = dict((instance.id, instance) for instance in model_instances if instance)
 
         # Remove all update metadata and instances that have the same revision
@@ -95,14 +96,15 @@ class BaseModel(Model):
         all_instances = []
         log.info('Prepared %d of %d updated items in %s', len(changed_items), len(update_items), time.time() - start)
 
-        # Update all the changed metadata and remove instances that no longer
-        # exist
+        # Update all the changed metadata and remove instances that no longer exist
         with db.atomic():
+            # For each item in the database that (may have) changed
             for id, instance in instances_by_id.iteritems():
                 if not instance:
                     continue
                 if id in changed_items:
                     changed_item = changed_items[id]
+                    # Create temp list with all changed items
                     all_instances.append(instance)
 
                     if cls._meta.has_children:
@@ -114,6 +116,7 @@ class BaseModel(Model):
 
                     del changed_items[id]
                 # The model does not exist anymore
+                #@TODO move this logic into separate function which compares against all items in the remote list
                 else:
                     instance.delete_instance()
                     log.info('Deleted %s', instance)

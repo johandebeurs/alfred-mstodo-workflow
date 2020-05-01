@@ -6,17 +6,17 @@ import re
 import locale
 from datetime import date, datetime, time, timedelta
 
-_inbox = 'Inbox'
-_single_word_list = 'Finances'
-_multi_word_list = 'Shopping List'
-_diacritic_list = u'Jardinería'
-_diacritic_list_insensitive = 'Jardineria'
+_defaultTaskfolder = 'Tasks'
+_single_word_taskfolder = 'Finances'
+_multi_word_taskfolder = 'Shopping List'
+_diacritic_taskfolder = u'Jardinería'
+_diacritic_taskfolder_insensitive = 'Jardineria'
 
-_lists = [
-	_inbox,
-	_single_word_list,
-	_multi_word_list,
-	_diacritic_list
+_taskfolders = [
+	_defaultTaskfolder,
+	_single_word_taskfolder,
+	_multi_word_taskfolder,
+	_diacritic_taskfolder
 ]
 
 _default_reminder_time = time(9, 0, 0)
@@ -66,20 +66,20 @@ single_recurrence_types = {
 }
 # @TODO convert to Py3
 @pytest.fixture
-def mock_lists(mocker):
+def mock_taskfolders(mocker):
 	"""
-	Causes stored_data to return the lists specified for this test suite
+	Causes stored_data to return the taskfolders specified for this test suite
 	"""
-	lists = map(lambda (i, title): { 'title': title, 'id': i }, enumerate(_lists))
-	mocker.patch('workflow.Workflow.stored_data', new=lambda *arg: lists)
+	taskfolders = map(lambda (i, title): { 'title': title, 'id': i }, enumerate(_taskfolders))
+	mocker.patch('workflow.Workflow.stored_data', new=lambda *arg: taskfolders)
 
 @pytest.fixture
-def mock_lists_empty(mocker):
+def mock_taskfolders_empty(mocker):
 	"""
-	Causes stored_data to return an empty array for lists
+	Causes stored_data to return an empty array for taskfolders
 	"""
-	lists = []
-	mocker.patch('workflow.Workflow.stored_data', new=lambda *arg: lists)
+	taskfolders = []
+	mocker.patch('workflow.Workflow.stored_data', new=lambda *arg: taskfolders)
 
 @pytest.fixture(autouse=True)
 def mock_default_reminder_time(mocker):
@@ -139,25 +139,25 @@ def mock_enabled_automatic_reminders(mocker):
 	mocker.patch('mstodo.models.preferences.Preferences.automatic_reminders', new=True)
 
 @pytest.fixture(autouse=True)
-def mock_default_list_inbox(mocker):
+def mock_default_taskfolder(mocker):
 	"""
-	Returns None for default_list_id rather than the user's preference
+	Returns None for default_taskfolder_id rather than the user's preference
 	"""
-	mocker.patch('mstodo.models.preferences.Preferences.default_list_id', new=None)
+	mocker.patch('mstodo.models.preferences.Preferences.default_taskfolder_id', new=None)
 
 @pytest.fixture()
-def mock_default_list_single_word_list(mocker):
+def mock_default_taskfolder_single_word_taskfolder(mocker):
 	"""
-	Returns 1 for default_list_id rather than the user's preference
+	Returns 1 for default_taskfolder_id rather than the user's preference
 	"""
-	mocker.patch('mstodo.models.preferences.Preferences.default_list_id', new=1)
+	mocker.patch('mstodo.models.preferences.Preferences.default_taskfolder_id', new=1)
 
 @pytest.fixture()
-def mock_default_list_invalid_list(mocker):
+def mock_default_taskfolder_invalid_taskfolder(mocker):
 	"""
-	Returns 8 for default_list_id rather than the user's preference
+	Returns 8 for default_taskfolder_id rather than the user's preference
 	"""
-	mocker.patch('mstodo.models.preferences.Preferences.default_list_id', new=8)
+	mocker.patch('mstodo.models.preferences.Preferences.default_taskfolder_id', new=8)
 
 @pytest.fixture(autouse=True)
 def set_locale():
@@ -176,7 +176,7 @@ def assert_task(task, phrase=None, title=None, list_id=None, list_title=None, du
 	assert task.phrase == phrase
 	assert task.title == title
 
-	# These will default to the Inbox list, do not assert None
+	# These will default to the Tasks taskfolder, do not assert None
 	if list_id:
 		assert task.list_id == list_id
 	if list_title:
@@ -222,40 +222,40 @@ class TestBasics():
 
 		assert_task(task, phrase=phrase, title=title)
 
-	def test_inbox_is_default(self):
-		target_list = _inbox
+	def test_tasks_is_default(self):
+		target_taskfolder = _defaultTaskfolder
 		title = 'a sample task'
 		phrase = title
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	@pytest.mark.usefixtures("mock_default_list_single_word_list", "mock_lists")
-	def test_default_list_preference_is_default(self):
-		target_list = _single_word_list
+	@pytest.mark.usefixtures("mock_default_taskfolder_single_word_taskfolder", "mock_taskfolders")
+	def test_default_taskfolder_preference_is_default(self):
+		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
 		phrase = title
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	@pytest.mark.usefixtures("mock_default_list_invalid_list", "mock_lists")
-	def test_inbox_is_default_for_invalid_list_preference(self):
-		target_list = _inbox
+	@pytest.mark.usefixtures("mock_default_taskfolder_invalid_taskfolder", "mock_taskfolders")
+	def test_tasks_is_default_for_invalid_taskfolder_preference(self):
+		target_taskfolder = _defaultTaskfolder
 		title = 'a sample task'
 		phrase = title
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	@pytest.mark.usefixtures("mock_lists_empty")
-	def test_inbox_is_default_before_syncing_lists(self):
-		target_list = _inbox
+	@pytest.mark.usefixtures("mock_taskfolders_empty")
+	def test_tasks_is_default_before_syncing_taskfolders(self):
+		target_taskfolder = _defaultTaskfolder
 		title = 'a sample task'
 		phrase = title
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
 #
 # Combining reminder dates
@@ -323,132 +323,132 @@ class TestReminderDateCombine():
 		assert reminder_date.time() == _default_reminder_time
 
 #
-# Lists
+# Taskfolders
 #
 
-@pytest.mark.usefixtures("mock_lists")
-class TestLists():
+@pytest.mark.usefixtures("mock_taskfolders")
+class TestTaskfolders():
 
-	def test_list_name_exact_match(self):
-		target_list = _single_word_list
+	def test_taskfolder_name_exact_match(self):
+		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_list, title) # Finances: a sample task
+		phrase = '%s: %s' % (target_taskfolder, title) # Finances: a sample task
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_infix_list_name_exact_match(self):
-		target_list = _single_word_list
+	def test_infix_taskfolder_name_exact_match(self):
+		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s in %s' % (title, target_list) # a sample task in Finances
+		phrase = '%s in %s' % (title, target_taskfolder) # a sample task in Finances
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_list_name_diacritic_exact_match(self):
-		target_list = _diacritic_list
+	def test_taskfolder_name_diacritic_exact_match(self):
+		target_taskfolder = _diacritic_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_list, title) # Jardinería: a sample task
+		phrase = '%s: %s' % (target_taskfolder, title) # Jardinería: a sample task
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_list_substring_prefix(self):
-		target_list = _single_word_list
+	def test_taskfolder_substring_prefix(self):
+		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_list[:3], title) # Fin: a sample task
+		phrase = '%s: %s' % (target_taskfolder[:3], title) # Fin: a sample task
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_list_substring_infix(self):
-		target_list = _single_word_list
+	def test_taskfolder_substring_infix(self):
+		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_list[2:5], title) # nan: a sample task
+		phrase = '%s: %s' % (target_taskfolder[2:5], title) # nan: a sample task
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_list_initials(self):
-		target_list = _multi_word_list
+	def test_taskfolder_initials(self):
+		target_taskfolder = _multi_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (initials(target_list), title) # SL: a sample task
+		phrase = '%s: %s' % (initials(target_taskfolder), title) # SL: a sample task
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_infix_list_initials(self):
-		target_list = _multi_word_list
+	def test_infix_taskfolder_initials(self):
+		target_taskfolder = _multi_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s in list %s' % (title, initials(target_list)) # a sample task in list SL
+		phrase = '%s in list %s' % (title, initials(target_taskfolder)) # a sample task in list SL
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_infix_list_initials_ignored_if_lowercase(self):
+	def test_infix_taskfolder_initials_ignored_if_lowercase(self):
 		"""
 		Fewer than 3 characters should be ignored unless uppercase
 		"""
-		target_list = _multi_word_list
+		target_taskfolder = _multi_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s in %s' % (title, initials(target_list).lower()) # a sample task in sl
+		phrase = '%s in %s' % (title, initials(target_taskfolder).lower()) # a sample task in sl
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=phrase)
 
-	def test_list_name_case_insensitive_match(self):
-		target_list = _single_word_list
+	def test_taskfolder_name_case_insensitive_match(self):
+		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_list.upper(), title) # FINANCES: a sample task
+		phrase = '%s: %s' % (target_taskfolder.upper(), title) # FINANCES: a sample task
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_list_name_diacritic_insensitive_match(self):
-		target_list = _diacritic_list
+	def test_taskfolder_name_diacritic_insensitive_match(self):
+		target_taskfolder = _diacritic_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (_diacritic_list_insensitive, title) # Jardineria: a sample task (no accent)
+		phrase = '%s: %s' % (_diacritic_taskfolder_insensitive, title) # Jardineria: a sample task (no accent)
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_infix_list_name_containing_infix_keyword(self):
+	def test_infix_taskfolder_name_containing_infix_keyword(self):
 		"""
 		Very contrived, but the point is that if a list contains "in" we need
 		to match the entire phrase that was meant to be the list keyword,
 		rather than matching a part of the list and leaving a part of the list
 		in the task title
 		"""
-		target_list = _diacritic_list
+		target_taskfolder = _diacritic_taskfolder
 		list_phrase = 'in jard in eria'
 		title = 'a sample task'
-		phrase = '%s: %s' % (_diacritic_list_insensitive, title) # Jardineria: a sample task (no accent)
+		phrase = '%s: %s' % (_diacritic_taskfolder_insensitive, title) # Jardineria: a sample task (no accent)
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list))
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_ignores_unknown_list_name(self):
+	def test_ignores_unknown_taskfolder_name(self):
 		title = 'not a list: a sample task'
 		phrase = title
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title)
 
-	def test_ignores_unknown_infix_list_name(self):
+	def test_ignores_unknown_infix_taskfolder_name(self):
 		title = 'a sample task in not a list'
 		phrase = title
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title)
 
-	def test_list_prompt(self):
+	def test_taskfolder_prompt(self):
 		title = 'a sample task'
 		phrase = ': %s' % (title)
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, has_list_prompt=True)
 
-	def test_infix_list_does_not_prompt(self):
+	def test_infix_taskfolder_does_not_prompt(self):
 		title = 'a sample task in'
 		phrase = '%s ' % (title)
 		task = TaskParser(phrase)
@@ -482,14 +482,14 @@ class TestHashtags():
 
 		assert_task(task, phrase=phrase, title=title)
 
-	@pytest.mark.usefixtures("mock_lists")
+	@pytest.mark.usefixtures("mock_taskfolders")
 	def test_hashtag_prompt_following_list(self):
-		target_list = _single_word_list
+		target_taskfolder = _single_word_taskfolder
 		title = '#'
-		phrase = '%s:%s' % (target_list, title)
+		phrase = '%s:%s' % (target_taskfolder, title)
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list), has_hashtag_prompt=True)
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder), has_hashtag_prompt=True)
 	
 #
 # Due date
@@ -924,18 +924,18 @@ class TestReminders():
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
 
-	@pytest.mark.usefixtures("mock_lists")
+	@pytest.mark.usefixtures("mock_taskfolders")
 	def test_reminder_with_list(self):
-		target_list = _single_word_list
+		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
 		due_date = _tomorrow
 		due_phrase = 'due tomorrow'
 		reminder_phrase = 'alarm at 8:00a'
 		reminder_date = datetime.combine(due_date, time(8, 0, 0))
-		phrase = '%s:%s %s %s' % (target_list, title, due_phrase, reminder_phrase)
+		phrase = '%s:%s %s %s' % (target_taskfolder, title, due_phrase, reminder_phrase)
 		task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_list, list_id=_lists.index(target_list), due_date=due_date, reminder_date=reminder_date)
+		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder), due_date=due_date, reminder_date=reminder_date)
 
 	@pytest.mark.usefixtures("mock_enabled_automatic_reminders")
 	def test_automatic_reminder_with_due_date(self):
@@ -1090,11 +1090,11 @@ class TestPhrases():
 
 		assert new_phrase == '%s' % (new_title)
 
-	def test_change_list_title(self):
-		new_list_title = 'new title'
-		new_phrase = self.task.phrase_with(list_title=new_list_title)
+	def test_change_taskfolder_title(self):
+		new_taskfolder_title = 'new title'
+		new_phrase = self.task.phrase_with(list_title=new_taskfolder_title)
 
-		assert new_phrase == '%s: %s' % (new_list_title, self.title)
+		assert new_phrase == '%s: %s' % (new_taskfolder_title, self.title)
 
 	def test_change_due_date(self):
 		new_due_date = 'due tomorrow'
@@ -1125,7 +1125,7 @@ class TestPhrases():
 
 		assert new_phrase == '%s *' % (self.title)
 
-	def test_prompt_list_title(self):
+	def test_prompt_taskfolder_title(self):
 		new_phrase = self.task.phrase_with(list_title=True)
 
 		assert new_phrase == ': %s' % (self.title)

@@ -72,7 +72,7 @@ def sync(background=False):
 
     user.User.sync(background=background)
     taskfolder.TaskFolder.sync(background=background)
-    task.Task.sync_modified_tasks(background=background)
+    task.Task.sync_all_tasks(background=background)
 
     if background:
         if first_sync:

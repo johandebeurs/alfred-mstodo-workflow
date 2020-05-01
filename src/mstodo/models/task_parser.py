@@ -338,7 +338,7 @@ class TaskParser(object):
                         phrase = phrase[:match.start()]
                         break
 
-        # No list parsed, assign to inbox
+        # No list parsed, assign to Tasks
         if not self.list_title:
             if prefs.default_taskfolder_id and taskfolders:
                 if prefs.default_taskfolder_id == DEFAULT_TASKFOLDER_MOST_RECENT:
