@@ -55,20 +55,27 @@ def commit(args, modifier=None):
     task = Task.get(Task.id == task_id)
 
     if action == 'toggle-completion':
-        due_date = task.due_date
+        due_date = task.dueDateTime
 
         if modifier == 'alt':
             due_date = date.today()
 
         if task.status == 'completed':
-            tasks.update_task(task.id, task.changeKey, completed=False, due_date=due_date)
-            print('The task was marked incomplete')
+            res = tasks.update_task(task.id, task.changeKey, completed=False, due_date=due_date)
+            if res.status_code == 200:
+                print('The task was marked incomplete')
+            else:
+                print('An unhandled error occurred')
         else:
-            tasks.update_task(task.id, task.changeKey, completed=True, due_date=due_date)
-            print('The task was marked complete')
+            res = tasks.update_task(task.id, task.changeKey, completed=True, due_date=due_date)
+            if res.status_code == 200:
+                print('The task was marked complete')
+            else:
+                print('An unhandled error occurred')
 
     elif action == 'delete':
-        if tasks.delete_task(task.id, task.changeKey):
+        res = tasks.delete_task(task.id, task.changeKey)
+        if res.status_code == 204:
             print('The task was deleted')
         else:
             print('Please try again')

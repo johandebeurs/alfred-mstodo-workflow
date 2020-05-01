@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 from datetime import date, datetime, timedelta
+import logging
 
 from peewee import JOIN, OperationalError
 from workflow.background import is_running
@@ -11,6 +12,8 @@ from mstodo.models.task import Task
 from mstodo.models.taskfolder import TaskFolder
 from mstodo.sync import background_sync, background_sync_if_necessary, sync
 from mstodo.util import relaunch_alfred, workflow
+
+log = logging.getLogger('mstodo')
 
 _hashtag_prompt_pattern = r'#\S*$'
 
@@ -103,10 +106,10 @@ def filter(args):
         conditions = True
 
     tasks = Task.select().join(TaskFolder).where(
-        Task.status != 'completed' &
-        (Task.dueDateTime < date.today() + timedelta(days=duration_info['days'] + 1)) &
-        (Task.dueDateTime > date.today() + timedelta(days=1)) &
-        Task.list.is_null(False) &
+        (Task.status != 'completed') &
+        (Task.dueDateTime < datetime.now() + timedelta(days=duration_info['days'] + 1)) &
+        (Task.dueDateTime > datetime.now() + timedelta(days=1)) &
+        Task.list_id.is_null(False) &
         conditions
     )\
         .order_by(Task.dueDateTime.asc(), Task.reminderDateTime.asc(), Task.lastModifiedDateTime.asc())

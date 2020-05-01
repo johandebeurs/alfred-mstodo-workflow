@@ -210,11 +210,10 @@ def create_task(taskfolder_id, title, assignee_id=None, recurrence_type=None, re
 def update_task(id, revision, title=None, assignee_id=None, recurrence_type=None, recurrence_count=None, due_date=None, reminder_date=None, starred=None, completed=None):
     params = {}
 
-    if completed == True:
-        req = api.post('me/outlook/tasks/%s/complete',id)
-        info = req.json()
-        return info
-    elif completed == False:
+    if completed is True:
+        res = api.post('me/outlook/tasks/'+id+'/complete')
+        return res
+    elif completed is False:
         params['status'] = 'notStarted'
         params['completedDateTime'] = {}
     
@@ -247,10 +246,9 @@ def update_task(id, revision, title=None, assignee_id=None, recurrence_type=None
     # remove = []
 
     if params:
-        req = api.patch('me/outlook/tasks/' + id, params)
-        info = req.json()
+        res = api.patch('me/outlook/tasks/' + id, params)
 
-        return info
+        return res
 
     return None
 
