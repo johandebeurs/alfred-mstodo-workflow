@@ -1,21 +1,21 @@
 [submodule "lib/parsedatetime"]
 	path = lib/parsedatetime
-	url = git@github.com:bear/parsedatetime.git
+	url = https://github.com/bear/parsedatetime.git
 [submodule "lib/dateutil"]
 	path = lib/dateutil
-	url = git@github.com:dateutil/dateutil.git
+	url = https://github.com/dateutil/dateutil.git
 [submodule "lib/alfred-workflow"]
 	path = lib/alfred-workflow
-	url = git@github.com:deanishe/alfred-workflow.git
+	url = https://github.com/deanishe/alfred-workflow.git
 [submodule "lib/peewee"]
 	path = lib/peewee
-	url = git@github.com:coleifer/peewee.git
+	url = https://github.com/coleifer/peewee.git
 [submodule "lib/six"]
 	path = lib/six
-	url = git@github.com:benjaminp/six.git
+	url = https://github.com/benjaminp/six.git
 [submodule "lib/futures"]
 	path = lib/futures
-	url = git@github.com:agronholm/pythonfutures.git
+	url = https://github.com/agronholm/pythonfutures.git
 [submodule "lib/requests"]
 	path = lib/requests
-	url = git@github.com:psf/requests.git
+	url = https://github.com/psf/requests.git
