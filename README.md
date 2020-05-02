@@ -4,7 +4,7 @@ Work-in-progress [Alfred](http://www.alfredapp.com/) workflow for [Microsoft ToD
 
 Beginner and advanced approaches to adding a monthly repeating task beginning the following week:
 
-![Simple and advanced usage](screenshots/td-combined.gif)
+![Simple and advanced usage](screenshots/alfred-mstodo-taskentry.gif)
 
 ----------
 
