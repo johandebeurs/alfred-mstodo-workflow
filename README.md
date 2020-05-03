@@ -21,12 +21,11 @@ After downloading, simply double-click to install the workflow in Alfred. Use th
 Add tasks
 --------
 
-The workflow provides an easy guided experience with tips along the way that will help you become a power user. 
+The workflow provides an easy guided experience with tips along the way that will help you become a power user.
 
 The welcome screen appears when you've typed `td` (and nothing else). Special commands are in the form `td-command` with no space; once you type a space after `td ` you're in task entry mode. Partial commands are matched, so rather than typing `td-upcoming` to get to the Upcoming tasks list you can type as little as `td-up` or even `tdu`.
 
 ![Welcome screen](screenshots/td-welcome.png)
-
 
 ### Adding tasks with due dates and recurrence
 
@@ -63,7 +62,7 @@ You can also select a list *after* typing your task with the "in" keyword. To av
 
 ### Reminders
 
-Microsoft ToDo uses alerts to remind you about tasks that are due, either on the due date or in advance. To set a reminder, either include a time with your due date or use an explicit reminder phrase like *remind me at 3:00pm on June 11*). 
+Microsoft ToDo uses alerts to remind you about tasks that are due, either on the due date or in advance. To set a reminder, either include a time with your due date or use an explicit reminder phrase like *remind me at 3:00pm on June 11*).
 
 #### Examples
 
@@ -181,7 +180,7 @@ There is an option in `td-pref` to set a list other than Tasks as the default wh
 
 ### Changelog
 
-If you notice any problems or want to see what changed in the latest version, jump to the *About* screen from the main menu or type `td-about`. 
+If you notice any problems or want to see what changed in the latest version, jump to the *About* screen from the main menu or type `td-about`.
 
 ![About screen](screenshots/td-about.png)
 
@@ -194,7 +193,7 @@ If you are currently using an experimental version the workflow will always prom
 Security
 --------
 
-Your Microsoft ToDo password is never made available to the workflow or stored in any way. Instead, when you log in through the Microsoft ToDo portal you are asked to authorise the workflow to access your account. 
+Your Microsoft ToDo password is never made available to the workflow or stored in any way. Instead, when you log in through the Microsoft ToDo portal you are asked to authorise the workflow to access your account.
 
 You can log out at any time through the `td-pref` preferences screen. Upon logging out, all caches, synced data, and workflow preferences are removed. To revert to the default workflow settings simply log out then log back in.
 
