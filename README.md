@@ -41,7 +41,7 @@ Use the menus to configure your task until you become a power user capable of ty
 
 To select a list, type it first followed by a colon or use the Change list menu item. No need to type the full list name, as long as you see the correct list in Alfred a few letters is usually sufficient. You can also set a [default list](#default-list) or default to the most recently used list.
 
-![List by substring matching](td_new-within-list.png)
+![List by substring matching](screenshots/td_new-within-list.png)
 
 You can also select a list *after* typing your task with the "in" keyword. To avoid false positives you will need to use all-caps in order to match a list by typing fewer than 3 characters.
 
