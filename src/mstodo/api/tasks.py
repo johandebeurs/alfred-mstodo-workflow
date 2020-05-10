@@ -12,11 +12,9 @@ from mstodo import config
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
 
-def tasks_all(completed=None, since_datetime=None):
-    start = time.time()
-    log.info(since_datetime)
-    query = '?$top='+config.MS_TODO_PAGE_SIZE+'&count=true'
-    if (completed is not None or since_datetime is not None):
+def _build_querystring(completed=None, dt=None, afterdt=True, fields=[]):
+    query = '?$top=' + config.MS_TODO_PAGE_SIZE + '&count=true&$select=' + ''.join([field + ',' for field in fields])[:-1]
+    if (completed is not None or dt is not None):
         query += '&$filter='
         if completed == True: 
             query += "status+eq+'completed'"
@@ -24,68 +22,37 @@ def tasks_all(completed=None, since_datetime=None):
             query += "status+ne+'completed'"
         if completed is not None: 
             query += "&"
-        if since_datetime is not None: 
-            query += "lastModifiedDateTime+ge+" + since_datetime.isoformat()[:-4] + "Z"
+        if dt is not None: 
+            query += "lastModifiedDateTime+" + ("ge+" if afterdt else "lt+") + dt.isoformat()[:-4] + "Z"
     else:
         query += ''
-    next_link = "me/outlook/tasks" + query
-    tasks = []
+    return query
+
+def tasks(taskfolder_id=None, completed=None, dt=None, afterdt=None, fields=[]):
+    root_uri = ('me/outlook/taskFolders/' + taskfolder_id + '/tasks') if taskfolder_id is not None else 'me/outlook/tasks' 
+    next_link = root_uri + _build_querystring(
+        completed=completed, 
+        dt=dt, 
+        afterdt=afterdt, 
+        fields=fields
+    )
+    task_data = []
     while True:
+        start_page = time.time()
         req = api.get(next_link)
-        tasks.extend(req.json()['value'])
+        task_data.extend(req.json()['value'])
+        log.info('Retrieved %d %s%stasks in %s', 
+            len(req.json()['value']),
+            'modified ' if afterdt else '',
+            'completed ' if completed else '',
+            time.time() - start_page
+        )
         if '@odata.nextLink' in req.json():
             next_link= req.json()['@odata.nextLink'].replace(config.MS_TODO_API_BASE_URL + '/','')
         else:
             break
     
-    log.info('Retrieved %d %stasks in %s', len(tasks), 'completed ' if completed else '', time.time() - start)
-
-    return tasks
-
-def tasks(taskfolder_id, completed=False, subtasks=False, positions=None):
-    start = time.time()
-    req = api.get(("me/outlook/taskFolders/" + taskfolder_id + "/tasks?$filter=status+") + ("eq" if completed else "ne") + "+'completed'")
-    #     ('subtasks' if subtasks else 'tasks'), {
-    #     'list_id': int(list_id),
-    #     'completed': completed
-    # })
-    tasks = []
-    positions = []
-    task_type = ''
-
-    if completed:
-        task_type += 'completed '
-    if subtasks:
-        task_type += 'sub'
-
-    log.info(req.json())
-    tasks = req.json()['value']
-    log.info('Retrieved %stasks for folder %s in %s', task_type, taskfolder_id, time.time() - start)
-
-    return tasks
-
-# def task_positions(list_id):
-#     start = time.time()
-#     positions = []
-
-#     from concurrent import futures
-
-#     with futures.ThreadPoolExecutor(max_workers=2) as executor:
-#         jobs = (
-#             executor.submit(api.get, 'task_positions', {'list_id': list_id}),
-#             executor.submit(api.get, 'subtask_positions', {'list_id': list_id})
-#         )
-
-#         for job in futures.as_completed(jobs):
-#             req = job.result()
-#             data = req.json()
-
-#             if len(data) > 0:
-#                 positions += data[0]['values']
-
-#     log.info('Retrieved task positions for list %d in %s', list_id, time.time() - start)
-
-#     return positions
+    return task_data
 
 def task(id):
     req = api.get('me/outlook/tasks/' + id)
@@ -94,7 +61,7 @@ def task(id):
     return info
 
 def set_due_date(due_date):
-    due_date = datetime.datetime.combine(due_date,datetime.time(0,0,0,1)) 
+    due_date = datetime.datetime.combine(due_date, datetime.time(0, 0, 0, 1))
     # Microsoft ignores the time component of the API response so we don't do TZ conversion here
     return {
         'dueDateTime': {
@@ -201,8 +168,6 @@ def create_task(taskfolder_id, title, assignee_id=None, recurrence_type=None, re
     #     params['assignedTo'] = int(assignee_id)
 
     req = api.post('me/outlook/taskFolders/' + taskfolder_id + '/tasks', params)
-    info = req.json()
-
     log.debug(req.status_code)
 
     return req
@@ -232,8 +197,7 @@ def update_task(id, revision, title=None, assignee_id=None, recurrence_type=None
         
     #@TODO this requires all three to be set. Need to ensure due_date is pulled from task on calling this function
     if (recurrence_count is not None and recurrence_type is not None and due_date is not None):
-        params.update(set_recurrence(recurrence_count, recurrence_type, due_date)) 
-
+        params.update(set_recurrence(recurrence_count, recurrence_type, due_date))
     #@TODO maybe add these if required
     # params_new = {
     #     "categories": ["String"],

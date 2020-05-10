@@ -42,6 +42,7 @@ def authorise():
 def deauthorise():
     try:
         workflow().delete_password(config.KC_OAUTH_TOKEN)
+        workflow().delete_password(config.KC_REFRESH_TOKEN)
         log.debug('Deauthorising')
     except PasswordNotFound:
         pass

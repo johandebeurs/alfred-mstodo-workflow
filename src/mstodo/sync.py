@@ -58,21 +58,21 @@ def sync(background=False):
 
     first_sync = False
     
+
     try:
-        # this tries to retrieve the data from the database. If it doesn't exist then make this the first sync. 
+        # get root item from DB. If it doesn't exist then make this the first sync. 
         user.User.get()
-        Preferences.current_prefs().last_sync = datetime.utcnow()
     except user.User.DoesNotExist:
         first_sync = True
-        # Overwrite last datetime with yr 2000 to capture 99% of cases
-        Preferences.current_prefs().last_sync = datetime(2000,1,1,0,0,0,1) 
+        Preferences.current_prefs().last_sync = datetime.utcnow()
         notify('Please wait...', 'The workflow is syncing tasks for the first time')
-    log.debug('First sync: ' + str(first_sync))
-    log.debug(Preferences.current_prefs().last_sync)
 
     user.User.sync(background=background)
     taskfolder.TaskFolder.sync(background=background)
-    task.Task.sync_all_tasks(background=background)
+    if first_sync:
+        task.Task.sync_all_tasks(background=background)
+    else:
+        task.Task.sync_modified_tasks(background=background)
 
     if background:
         if first_sync:
@@ -80,7 +80,11 @@ def sync(background=False):
 
         # If executed manually, this will pass on to the post notification action
         print('Sync completed successfully')
-
+    
+    log.debug('First sync: ' + str(first_sync))
+    log.debug('Last sync time: ' + str(Preferences.current_prefs().last_sync))
+    Preferences.current_prefs().last_sync = datetime.utcnow()
+    log.debug('This sync time: ' + str(Preferences.current_prefs().last_sync))
     return True
 
 

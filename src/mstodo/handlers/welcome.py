@@ -1,7 +1,6 @@
 from mstodo import icons
 from mstodo.util import workflow
 
-
 def filter(args):
     workflow().add_item(
         'New task...',

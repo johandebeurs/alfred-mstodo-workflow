@@ -3,7 +3,7 @@ import re
 
 from mstodo import icons
 from mstodo.auth import is_authorised
-from mstodo.sync import background_sync_if_necessary
+from mstodo.sync import background_sync_if_necessary, sync
 from mstodo.util import workflow
 
 COMMAND_PATTERN = re.compile(r'^[^\w\s]+', re.UNICODE)
@@ -15,6 +15,7 @@ def route(args):
     command = []
     command_string = ''
     action = 'none'
+    logged_in = is_authorised()
 
     # Read the stored query, which will correspond to the user's alfred query
     # as of the very latest keystroke. This may be different than the query
@@ -37,7 +38,7 @@ def route(args):
     if 'about'.find(action) == 0:
         from mstodo.handlers import about
         handler = about
-    elif not is_authorised():
+    elif not logged_in:
         from mstodo.handlers import login
         handler = login
     elif 'folder'.find(action) == 0:
@@ -91,5 +92,7 @@ def route(args):
                     workflow().add_item('An update is available!', 'Update the ToDo workflow from version __VERSION__ to %s' % update_data.get('version'), arg='-about update', valid=True, icon=icons.DOWNLOAD)
 
             workflow().send_feedback()
-
-    background_sync_if_necessary()
+    
+    if logged_in:
+        background_sync_if_necessary()
+        # sync() #@TODO change before pushing to Github
