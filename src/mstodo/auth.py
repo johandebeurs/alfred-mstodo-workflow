@@ -141,9 +141,10 @@ def resolve_oauth_token(code=None,refresh_token=None):
     return False
 
 def await_token():
-    from http.server import HTTPServer, SimpleHTTPRequestHandler
+    import SimpleHTTPServer
+    import SocketServer
 
-    class OAuthTokenResponseHandler(SimpleHTTPRequestHandler):
+    class OAuthTokenResponseHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         def do_GET(self):
             auth_status = handle_authorisation_url(self.path)
             if not auth_status:
@@ -152,10 +153,9 @@ def await_token():
                 self.path = 'www/authorise.html'
             else:
                 self.path = 'www/decline.html'
-            SimpleHTTPRequestHandler.do_GET(self)
+            SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
             relaunch_alfred()
-
-    httpd = HTTPServer((config.OAUTH_SERVER, config.OAUTH_PORT), OAuthTokenResponseHandler)
-    httpd.timeout = config.OAUTH_TIMEOUT
     log.debug('Awating token on ' + config.MS_TODO_REDIRECT_URL)
-    httpd.handle_request() # waits for a single call to this URL
+    server = SocketServer.TCPServer(("", config.OAUTH_PORT), OAuthTokenResponseHandler)
+    server.timeout = config.OAUTH_TIMEOUT
+    server.handle_request() # waits for a single call to this URL

@@ -476,7 +476,7 @@ rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred-$version/Workflow\ Data/co
 				<integer>102</integer>
 				<key>script</key>
 				<string>version=${alfred_version:0:1}
-rm -rf ~/Library/Application\ Support/Alfred\ $version/Workflow\ Data/com.johandbeurs.alfred.mstodo/
+rm -rf ~/Library/Application\ Support/Alfred\ $version/Workflow\ Data/com.johandebeurs.alfred.mstodo/
 rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred-$version/Workflow\ Data/com.johandebeurs.alfred.mstodo/
 security delete-generic-password -s com.johandebeurs.alfred.mstodo -a oauth_token
 security delete-generic-password -s com.johandebeurs.alfred.mstodo -a refresh_token</string>
