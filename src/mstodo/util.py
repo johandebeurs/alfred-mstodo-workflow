@@ -28,7 +28,7 @@ def workflow():
                 'github_slug': 'johandebeurs/alfred-mstodo-workflow',
                 'version': version,
                 # Check for updates daily
-                # TODO: check less frequently as the workflow becomes more
+                #@TODO: check less frequently as the workflow becomes more
                 # stable
                 'frequency': 1,
                 # Always download pre-release updates if a prerelease is

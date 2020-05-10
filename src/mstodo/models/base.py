@@ -33,7 +33,6 @@ class BaseModel(Model):
     def _api2model(cls, data):
         fields = copy(cls._meta.fields)
         model_data = {}
-        log.debug(data)
 
         # Map relationships, e.g. from user_id to user's
         for (field_name, field) in cls._meta.fields.iteritems():
@@ -42,7 +41,7 @@ class BaseModel(Model):
             elif isinstance(field, ForeignKeyField):
                 fields[field_name + '_id'] = field
 
-            # The Wunderlist API does not include some falsy values. For
+            # The Microsoft ToDo API does not include some falsy values. For
             # example, if a task is completed then marked incomplete the
             # updated data will not include a completed key, so we have to set
             # the defaults for everything that is not specified
@@ -75,20 +74,21 @@ class BaseModel(Model):
         # before any additional processing on the metadata
         def revised(item):
             id = item['id']
+            logger = log.debug
+            # if api task is in database, has a changeKey and is unchanged
             if id in instances_by_id and 'changeKey' in item and instances_by_id[id].changeKey == item['changeKey']:
-                instance = instances_by_id[id]
-                del instances_by_id[id]
-
-                logger = log.debug
-
+                instance = instances_by_id[id] # read the single value from the database
+                del instances_by_id[id] # remove it from our database list
                 if type(instance)._meta.expect_revisions:
                     logger = log.info
-
+                
                 logger('Revision %s of %s is still the latest', instance.changeKey, instance)
-
+                
                 return False
+            logger('Item %s needs to be updated', id)
             return True
 
+        # changed items is the list of API data if it is updated based on the logic above
         changed_items = [item for item in update_items if revised(item)]
 
         # Map of id to the normalized item
@@ -98,7 +98,7 @@ class BaseModel(Model):
 
         # Update all the changed metadata and remove instances that no longer exist
         with db.atomic():
-            # For each item in the database that (may have) changed
+            # For each item in the database that is either deleted or changed
             for id, instance in instances_by_id.iteritems():
                 if not instance:
                     continue
@@ -111,30 +111,29 @@ class BaseModel(Model):
                         log.info('Syncing children of %s', instance)
                         instance._sync_children()
                     cls.update(**changed_item).where(cls.id == id).execute()
-                    log.info('Updated %s to revision %s', instance, changed_item['changeKey'] if 'changeKey' in changed_item else 'N/A')
+                    log.info('Updated %s in db to revision %s', instance, changed_item['changeKey'] if 'changeKey' in changed_item else 'N/A')
                     log.debug('with data %s', changed_item)
-
+                    # remove changed items from list to leave only new items
                     del changed_items[id]
                 # The model does not exist anymore
-                #@TODO move this logic into separate function which compares against all items in the remote list
                 else:
                     instance.delete_instance()
-                    log.info('Deleted %s', instance)
+                    log.info('Deleted %s from db', instance)
 
         # Bulk insert and retrieve
         new_values = changed_items.values()
 
-        # Insert in batches
+        # Insert new items in batches
         for i in xrange(0, len(new_values), 500):
             inserted_chunk = _balance_keys_for_insert(new_values[i:i + 500])
 
             with db.atomic():
                 cls.insert_many(inserted_chunk).execute()
 
-                log.info('Created %d of model %s', len(inserted_chunk), cls.__name__)
+                log.info('Created %d of model %s in db', len(inserted_chunk), cls.__name__)
 
                 inserted_ids = [i['id'] for i in inserted_chunk]
-                inserted_instances = cls.select().where(cls.id.in_(inserted_ids))
+                inserted_instances = cls.select().where(cls.id.in_(inserted_ids)) # read from db again
 
                 for instance in inserted_instances:
                     if type(instance)._meta.has_children:

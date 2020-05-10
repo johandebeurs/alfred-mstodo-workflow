@@ -30,20 +30,44 @@ _overdue_2x = u'❗️'
 _recurrence = u'↻'
 _reminder = u'⏰'
 
+_primary_api_fields = [
+    'id',
+    'parentFolderId',
+    'lastModifiedDateTime',
+    'changeKey',
+    'status'
+]
+_secondary_api_fields = [
+    'createdDateTime',
+    'startDateTime',
+    'dueDateTime',
+    'isReminderOn',
+    'reminderDateTime',
+    'completedDateTime',
+    'recurrence',
+    'subject',
+    'body',
+    'importance',
+    'sensitivity',
+    'hasAttachments',
+    'owner',
+    'assignedTo'
+]
+
 class Task(BaseModel):
     id = CharField(primary_key=True)
     list = ForeignKeyField(TaskFolder,index=True, related_name='tasks') #@TODO check related name syntax
-    createdDateTime = DateTimeUTCField(null=True)
-    lastModifiedDateTime = DateTimeUTCField(null=True)
-    changeKey = CharField(null=True)
+    createdDateTime = DateTimeUTCField()
+    lastModifiedDateTime = DateTimeUTCField()
+    changeKey = CharField()
     hasAttachments = BooleanField(null=True)
-    importance = CharField(index=True)
+    importance = CharField(index=True, null=True)
     isReminderOn = BooleanField(null=True)
     owner = ForeignKeyField(User, related_name='created_tasks', null=True)
     assignedTo = ForeignKeyField(User, related_name='assigned_tasks', null=True)
     sensitivity = CharField(index=True,null=True)
-    status = CharField(index=True,null=True)
-    title = TextField(index=True,null=True)
+    status = CharField(index=True)
+    title = TextField(index=True)
     completedDateTime = DateTimeUTCField(index=True, null=True)
     dueDateTime = DateTimeUTCField(index=True, null=True)
     reminderDateTime = DateTimeUTCField(index=True, null=True)
@@ -65,6 +89,7 @@ class Task(BaseModel):
                     task['list'] = v
                 if isinstance(v, dict):
                     if k.find("DateTime") > -1:
+                        # Datetimes are shown as a dicts with naive datetime + separate timezone field
                         task[k] = v['dateTime']
                     elif k == "body":
                         task['body_contentType'] = v['contentType']
@@ -79,58 +104,6 @@ class Task(BaseModel):
                         task['recurrence_type'] = window 
                         task['recurrence_count'] = v['pattern']['interval']
         return tasks_data
-
-    @classmethod
-    def sync_tasks_in_taskfolder(cls, taskfolder, background=False):
-        from mstodo.api import tasks
-        from concurrent import futures
-        start = time.time()
-        instances = []
-        tasks_data = []
-        # position_by_task_id = {}
-
-        with futures.ThreadPoolExecutor(max_workers=4) as executor:
-            # positions_job = executor.submit(tasks.task_positions, list.id)
-            jobs = (
-                executor.submit(tasks.tasks, taskfolder.id, completed=False),
-                executor.submit(tasks.tasks, taskfolder.id, completed=True)
-            )
-
-            for job in futures.as_completed(jobs):
-                tasks_data += job.result()
-
-            # position_by_task_id = dict((id, index) for (id, index) in enumerate(positions_job.result()))
-
-        log.info('Retrieved all %d tasks for %s in %s', len(tasks_data), taskfolder, time.time() - start)
-        start = time.time()
-
-        def task_order(task):
-            # task['order'] = position_by_task_id.get(task['id'])
-            # return task['order'] or 1e99
-            return 1e99
-
-        tasks_data.sort(key=task_order)
-
-        try:
-            # Include all tasks thought to be in the list, plus any additional
-            # tasks referenced in the data (task may have been moved to a different list)
-            task_ids = [task['id'] for task in tasks_data]
-            instances = cls.select(cls.id, cls.title, cls.changeKey)\
-                .where(cls.id.in_(task_ids))
-            log.info(instances)
-        except PeeweeException:
-            pass
-
-        log.info('Loaded all %d tasks for %s from the database in %s', len(instances), taskfolder, time.time() - start)
-        start = time.time()
-        log.info(tasks_data)
-
-        tasks_data = transform_datamodel(tasks_data)
-        cls._perform_updates(instances, tasks_data)
-
-        log.info('Completed updates to tasks in %s in %s', taskfolder, time.time() - start)
-
-        return None
     
     @classmethod
     def sync_all_tasks(cls, background=False):
@@ -143,17 +116,18 @@ class Task(BaseModel):
         tasks_data = []
 
         with futures.ThreadPoolExecutor(max_workers=4) as executor:
-            job = executor.submit(tasks.tasks_all)
+            fields = list(_primary_api_fields)
+            fields.extend(_secondary_api_fields)
+            kwargs = {'fields': fields}
+            job = executor.submit(lambda p: tasks.tasks(**p),kwargs)
             tasks_data = job.result()
 
-        log.info('Retrieved all %d tasks in %s', len(tasks_data), time.time() - start)
+        log.info('Retrieved all %d task ids in %s', len(tasks_data), time.time() - start)
         start = time.time()
 
         try:
-            # Pull instances from DB where task ID is in tasksdata returned from API
-            task_ids = [task['id'] for task in tasks_data]
-            instances = cls.select(cls.id, cls.title, cls.changeKey) #\
-                # .where(cls.id.in_(task_ids))
+            # Pull instances from DB if they exist
+            instances = cls.select(cls.id, cls.title, cls.changeKey) 
         except PeeweeException:
             pass
 
@@ -177,32 +151,47 @@ class Task(BaseModel):
         from mstodo.models.hashtag import Hashtag
         start = time.time()
         instances = []
-        tasks_data = []
+        all_tasks = []
 
-        # Remove 360 seconds to make sure all recent tasks are included
-        since_datetime = Preferences.current_prefs().last_sync - timedelta(seconds=360)
+        # Remove 60 seconds to make sure all recent tasks are included
+        dt = Preferences.current_prefs().last_sync - timedelta(seconds=60)
 
+        # run a single future for all tasks modified since last run
+        with futures.ThreadPoolExecutor() as executor:
+            job = executor.submit(lambda p: tasks.tasks(**p), {'dt':dt, 'afterdt':True})
+            modified_tasks = job.result()
+
+        # run a separate futures map over all taskfolders @TODO change this to be per taskfolder
         with futures.ThreadPoolExecutor(max_workers=4) as executor:
-            job = executor.submit(tasks.tasks_all, since_datetime=since_datetime)
-            tasks_data = job.result()
+            jobs = (
+                executor.submit(lambda p: tasks.tasks(**p), {'fields': _primary_api_fields, 'completed':True}),
+                executor.submit(lambda p: tasks.tasks(**p), {'fields': _primary_api_fields, 'completed':False})
+            )
+            for job in futures.as_completed(jobs):
+                all_tasks += job.result()
+                log.debug(job.result())
 
-        log.info('Retrieved all %d tasks modified since %s in %s', len(tasks_data), since_datetime, time.time() - start)
+        # if task in modified_tasks then remove from all taskfolder data
+        modified_tasks_ids = [task['id'] for task in modified_tasks]
+        for task in all_tasks:
+            if task['id'] in modified_tasks_ids:
+                all_tasks.remove(task)
+        all_tasks.extend(modified_tasks)
+
+        log.info('Retrieved all %d tasks including %d modifications since %s in %s', len(all_tasks), len(modified_tasks), dt, time.time() - start)
         start = time.time()
 
         try:
-            # Pull instances from DB where task ID is in tasksdata returned from API
-            #@TODO pull all task IDs from API and delete items from DB where not in list
-            task_ids = [task['id'] for task in tasks_data]
-            instances = cls.select(cls.id, cls.title, cls.changeKey)\
-                .where(cls.id.in_(task_ids))
+            # Pull instances from DB
+            instances = cls.select(cls.id, cls.title, cls.changeKey)
         except PeeweeException:
             pass
 
-        log.info('Loaded all %d tasks modified since %s from the database in %s', len(instances), since_datetime, time.time() - start)
+        log.info('Loaded all %d tasks from the database in %s', len(instances), time.time() - start)
         start = time.time()
 
-        tasks_data = cls.transform_datamodel(tasks_data)
-        cls._perform_updates(instances, tasks_data)
+        all_tasks = cls.transform_datamodel(all_tasks)
+        cls._perform_updates(instances, all_tasks)
 
         Hashtag.sync(background=background)
 
@@ -296,9 +285,15 @@ class Task(BaseModel):
 
         return '   '.join(subtitle)
 
+    def _sync_children(self):
+        from mstodo.models.hashtag import Hashtag
+
+        Hashtag.sync(background=True)
+
     def __str__(self):
         title = self.title if len(self.title) <= 20 else self.title[:20].rstrip() + u'…'
-        return u'<%s %s %s>' % (type(self).__name__, self.id, title)
+        task_subid = self.id[-32:]
+        return u'<%s ...%s %s>' % (type(self).__name__, task_subid, title)
 
     class Meta(object):
         order_by = ('lastModifiedDateTime', 'id')
