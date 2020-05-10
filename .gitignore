@@ -13,3 +13,4 @@ node_modules
 app/www/bower_components
 
 mstodo-*.alfredworkflow
+/.vscode
