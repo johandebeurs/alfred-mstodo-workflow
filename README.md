@@ -1,6 +1,6 @@
 Microsoft ToDo Workflow for Alfred (Beta)
 ==========================
-Work-in-progress [Alfred](http://www.alfredapp.com/) workflow for [Microsoft ToDo](http://todo.microsoft.com) (requires Alfred 2 or 3 with a Powerpack license).
+Work-in-progress [Alfred](http://www.alfredapp.com/) workflow for [Microsoft ToDo](http://todo.microsoft.com) (requires Alfred 2/3/4 with a Powerpack license).
 
 Beginner and advanced approaches to adding a monthly repeating task beginning the following week:
 
