@@ -517,17 +517,17 @@ security delete-generic-password -s com.johandebeurs.alfred.mstodo -a refresh_to
 		</dict>
 	</array>
 	<key>readme</key>
-	<string>New in version 0.1.2:
-  * First release
+	<string>New in version 0.1.3:
+  * Resolve issue setting default task folder
 
 More details:
-https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.2
+https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.3
 
 
 The 0.1 release is a first port of https://github.com/idpaterson/alfred-mstodo-workflow/ to the Wunderlist replacement, Microsoft ToDo
 
 More details:
-https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.2</string>
+https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.3</string>
 	<key>uidata</key>
 	<dict>
 		<key>06482847-7F21-4C57-88BB-B642E0182781</key>

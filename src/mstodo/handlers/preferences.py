@@ -122,7 +122,7 @@ def filter(args):
                 workflow().add_item(
                     'Most recently used folder',
                     'Default to the last folder to which a task was added',
-                    arg='-pref default_folder %d' % DEFAULT_TASKFOLDER_MOST_RECENT,
+                    arg='-pref default_folder %s' % DEFAULT_TASKFOLDER_MOST_RECENT,
                     valid=True, icon=icons.RECURRENCE
                 )
             icon = icons.INBOX if f['isDefaultFolder'] else icons.LIST
@@ -255,12 +255,12 @@ def commit(args, modifier=None):
         taskfolders = workflow().stored_data('taskfolders')
 
         if len(args) > 2:
-            default_taskfolder_id = int(args[2])
+            default_taskfolder_id = args[2]
 
         prefs.default_taskfolder_id = default_taskfolder_id
 
         if default_taskfolder_id:
-            default_folder_name = next((f['title'] for f in taskfolders if f['id'] == default_taskfolder_id), 'Tasks')
+            default_folder_name = next((f['title'] for f in taskfolders if f['id'] == default_taskfolder_id), 'most recent')
             print('Tasks will be added to your %s folder by default' % default_folder_name)
         else:
             print('Tasks will be added to the Tasks folder by default')

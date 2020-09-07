@@ -2,7 +2,7 @@ from datetime import time, timedelta
 
 from mstodo.util import workflow
 
-DEFAULT_TASKFOLDER_MOST_RECENT = -1
+DEFAULT_TASKFOLDER_MOST_RECENT = 'most_recent'
 
 AUTOMATIC_REMINDERS_KEY = 'automatic_reminders'
 DEFAULT_TASKFOLDER_ID_KEY = 'default_taskfolder_id'
