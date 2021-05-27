@@ -58,7 +58,7 @@ def commit(args, modifier=None):
     manual_verification_url = re.search(r'localhost\S+', command)
 
     if manual_verification_url:
-        auth_status = auth.handle_authorization_url('http://' + manual_verification_url.group())
+        auth_status = auth.handle_authorisation_url('http://' + manual_verification_url.group())
 
         if auth_status is True:
             relaunch_alfred()
