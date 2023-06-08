@@ -1,11 +1,10 @@
-#@TODO review this file e2e
-
-from datetime import date, datetime, timedelta
 import logging
 
+from datetime import date, datetime, timedelta
 from workflow import Workflow
+from mstodo import __githubslug__
 
-try:  # Python 2.7+
+try:
     from logging import NullHandler
 except ImportError:
     class NullHandler(logging.Handler):
@@ -13,27 +12,20 @@ except ImportError:
             pass
 
 _workflow = None
-_update_settings = None
 
-
-def workflow():
-    global _workflow, _update_settings
+def wf_wrapper():
+    global _workflow
 
     if _workflow is None:
-        version = '__VERSION__'
-
         _workflow = Workflow(
             capture_args=False,
             update_settings={
-                'github_slug': 'johandebeurs/alfred-mstodo-workflow',
-                'version': version,
+                'github_slug': __githubslug__,
                 # Check for updates daily
                 #@TODO: check less frequently as the workflow becomes more
                 # stable
                 'frequency': 1,
-                # Always download pre-release updates if a prerelease is
-                # currently installed
-                'prerelease': '-' in version
+                #@TODO Check if a prerelease is installed and set flag to true if so
             }
         )
 
@@ -44,9 +36,9 @@ def workflow():
 
 
 def parsedatetime_calendar():
-    from parsedatetime import Calendar, Constants
+    from parsedatetime import Calendar, VERSION_CONTEXT_STYLE
 
-    return Calendar(parsedatetime_constants())
+    return Calendar(parsedatetime_constants(), version=VERSION_CONTEXT_STYLE)
 
 
 def parsedatetime_constants():
@@ -73,10 +65,10 @@ def user_locale():
 
     return loc
 
-def format_time(time, format):
-    c = parsedatetime_constants()
+def format_time(time, fmt):
+    cnst = parsedatetime_constants()
 
-    expr = c.locale.timeFormats[format]
+    expr = cnst.locale.timeFormats[fmt]
     expr = (expr
             .replace('HH', '%H')
             .replace('h', '%I')
@@ -99,9 +91,9 @@ def short_relative_formatted_date(dt):
         return 'today'
     if d == today + timedelta(days=1):
         return 'tomorrow'
-    elif d == today - timedelta(days=1):
+    if d == today - timedelta(days=1):
         return 'yesterday'
-    elif d.year == today.year:
+    if d.year == today.year:
         # Wed, Mar 3
         date_format = '%a, %b %d'
 
@@ -110,7 +102,7 @@ def short_relative_formatted_date(dt):
 def relaunch_alfred(command='td'):
     import subprocess
 
-    alfred_major_version = workflow().alfred_version.tuple[0]
+    alfred_major_version = wf_wrapper().alfred_version.tuple[0]
 
     subprocess.call([
         '/usr/bin/env', 'osascript', '-l', 'JavaScript',
@@ -119,7 +111,7 @@ def relaunch_alfred(command='td'):
 
 def utc_to_local(utc_dt):
     import calendar
-    
+
     # get integer timestamp to avoid precision lost. Returns naive local datetime
     timestamp = calendar.timegm(utc_dt.timetuple())
     local_dt = datetime.fromtimestamp(timestamp)

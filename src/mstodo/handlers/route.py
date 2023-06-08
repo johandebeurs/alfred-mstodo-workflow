@@ -3,12 +3,11 @@ import re
 
 from mstodo import icons
 from mstodo.auth import is_authorised
-from mstodo.sync import background_sync_if_necessary, sync
-from mstodo.util import workflow
+from mstodo.sync import background_sync_if_necessary
+from mstodo.util import wf_wrapper
 
 COMMAND_PATTERN = re.compile(r'^[^\w\s]+', re.UNICODE)
 ACTION_PATTERN = re.compile(r'^\W+', re.UNICODE)
-
 
 def route(args):
     handler = None
@@ -16,14 +15,15 @@ def route(args):
     command_string = ''
     action = 'none'
     logged_in = is_authorised()
+    wf = wf_wrapper()
 
     # Read the stored query, which will correspond to the user's alfred query
     # as of the very latest keystroke. This may be different than the query
     # when this script was launched due to the startup latency.
     if args[0] == '--stored-query':
-        query_file = workflow().workflowfile('.query')
-        with open(query_file, 'r') as f:
-            command_string = workflow().decode(f.read())
+        query_file = wf.workflowfile('.query')
+        with open(query_file, 'r') as fp:
+            command_string = wf.decode(fp.read())
         os.remove(query_file)
     # Otherwise take the command from the first command line argument
     elif args:
@@ -84,15 +84,19 @@ def route(args):
             handler.commit(command, modifier)
         else:
             handler.filter(command)
+            # @TODO handle updates
+            if wf.update_available:
+                update_data = wf.cached_data('__workflow_update_status', max_age=0)
 
-            if workflow().update_available:
-                update_data = workflow().cached_data('__workflow_update_status', max_age=0)
+                if update_data.get('version') != str(wf.settings['__workflow_last_version']):
+                    wf.add_item(
+                        'An update is available!',
+                        f"Update the ToDo workflow from version {wf.settings['__workflow_last_version']} \
+                            to {update_data.get('version')}",
+                        arg='-about update', valid=True, icon=icons.DOWNLOAD
+                    )
 
-                if update_data.get('version') != '__VERSION__':
-                    workflow().add_item('An update is available!', 'Update the ToDo workflow from version __VERSION__ to %s' % update_data.get('version'), arg='-about update', valid=True, icon=icons.DOWNLOAD)
+            wf.send_feedback()
 
-            workflow().send_feedback()
-    
     if logged_in:
         background_sync_if_necessary()
-        # sync() #@TODO change before pushing to Github

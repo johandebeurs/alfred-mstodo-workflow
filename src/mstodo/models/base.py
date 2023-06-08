@@ -6,13 +6,13 @@ from dateutil import parser
 from peewee import (DateField, DateTimeField, ForeignKeyField, Model,
                     SqliteDatabase, TimeField)
 
-from mstodo.util import workflow, NullHandler
+from mstodo.util import wf_wrapper, NullHandler
 
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
 
-db = SqliteDatabase(workflow().datadir + '/mstodo.db')
-# This writes a SQLiteDB to ~/Library/Application Support/Alfred/Workflow Data/<this workflow> 
+db = SqliteDatabase(wf_wrapper().datadir + '/mstodo.db')
+# This writes a SQLiteDB to ~/Library/Application Support/Alfred/Workflow Data/<this workflow>
 
 def _balance_keys_for_insert(values):
     all_keys = set()
@@ -35,7 +35,7 @@ class BaseModel(Model):
         model_data = {}
 
         # Map relationships, e.g. from user_id to user's
-        for (field_name, field) in cls._meta.fields.iteritems():
+        for (field_name, field) in cls._meta.fields.items():
             if field_name.endswith('_id'):
                 fields[field_name[:-3]] = field
             elif isinstance(field, ForeignKeyField):
@@ -51,7 +51,7 @@ class BaseModel(Model):
                 model_data[field_name] = None
 
         # Map each data property to the correct field
-        for (k, v) in data.iteritems():
+        for (k, v) in data.items():
             if k in fields:
                 if isinstance(fields[k], (DateTimeField, DateField, TimeField)) and v is not None:
                     model_data[fields[k].name] = parser.parse(v)
@@ -81,11 +81,11 @@ class BaseModel(Model):
                 del instances_by_id[id] # remove it from our database list
                 if type(instance)._meta.expect_revisions:
                     logger = log.info
-                
-                logger('Revision %s of %s is still the latest', instance.changeKey, instance)
-                
+
+                logger("Revision {} of {} is still the latest".format(instance.changeKey, instance))
+
                 return False
-            logger('Item %s needs to be updated', id)
+            logger("Item {} needs to be updated".format(id))
             return True
 
         # changed items is the list of API data if it is updated based on the logic above
@@ -94,12 +94,13 @@ class BaseModel(Model):
         # Map of id to the normalized item
         changed_items = dict((item['id'], cls._api2model(item)) for item in changed_items)
         all_instances = []
-        log.info('Prepared %d of %d updated items in %s', len(changed_items), len(update_items), time.time() - start)
+        log.info("Prepared {} of {} in {} seconds"\
+                 .format(len(changed_items), len(update_items), round(time.time() - start, 3)))
 
         # Update all the changed metadata and remove instances that no longer exist
         with db.atomic():
             # For each item in the database that is either deleted or changed
-            for id, instance in instances_by_id.iteritems():
+            for id, instance in instances_by_id.items():
                 if not instance:
                     continue
                 if id in changed_items:
@@ -108,36 +109,38 @@ class BaseModel(Model):
                     all_instances.append(instance)
 
                     if cls._meta.has_children:
-                        log.info('Syncing children of %s', instance)
+                        log.info("Syncing children of {}".format(instance))
                         instance._sync_children()
                     cls.update(**changed_item).where(cls.id == id).execute()
-                    log.info('Updated %s in db to revision %s', instance, changed_item['changeKey'] if 'changeKey' in changed_item else 'N/A')
-                    log.debug('with data %s', changed_item)
+                    log.info("Updated {} in db to revision {}".format(
+                        instance, changed_item['changeKey'] if 'changeKey' in changed_item else 'N/A'
+                    ))
+                    log.debug("with data {}".format(changed_item))
                     # remove changed items from list to leave only new items
                     del changed_items[id]
                 # The model does not exist anymore
                 else:
                     instance.delete_instance()
-                    log.info('Deleted %s from db', instance)
+                    log.info("Deleted {} from db".format(instance))
 
         # Bulk insert and retrieve
-        new_values = changed_items.values()
+        new_values = list(changed_items.values())
 
         # Insert new items in batches
-        for i in xrange(0, len(new_values), 500):
+        for i in range(0, len(new_values), 500):
             inserted_chunk = _balance_keys_for_insert(new_values[i:i + 500])
 
             with db.atomic():
                 cls.insert_many(inserted_chunk).execute()
 
-                log.info('Created %d of model %s in db', len(inserted_chunk), cls.__name__)
+                log.info("Created {} of model {} in db".format(len(inserted_chunk), cls.__name__))
 
                 inserted_ids = [i['id'] for i in inserted_chunk]
                 inserted_instances = cls.select().where(cls.id.in_(inserted_ids)) # read from db again
 
                 for instance in inserted_instances:
                     if type(instance)._meta.has_children:
-                        log.info('Syncing children of %s', instance)
+                        log.info("Syncing children of {}".format(instance))
                         instance._sync_children()
 
                 all_instances += inserted_instances
@@ -149,7 +152,7 @@ class BaseModel(Model):
         return info
 
     def __str__(self):
-        return '<%s %s>' % (type(self).__name__, self.id)
+        return f"<{type(self).__name__} {self.id}>"
 
     def _sync_children(self):
         pass

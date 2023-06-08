@@ -4,13 +4,68 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "Python: Current File",
+            "name": "Debug current file",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Custom command",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
+            "console": "integratedTerminal",
+            "args": []
+        },
+        {
+            "name": "Simulate Welcome",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
+            "console": "integratedTerminal",
+            "args": [""]
+        },
+        {
+            "name": "Simulate About",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
+            "console": "integratedTerminal",
+            "args": ["about"],
+        },
+        {
+            "name": "Simulate Preferences",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
+            "console": "integratedTerminal",
+            "args": ["pref"],
+        },
+        {
+            "name": "Simulate Logout",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
+            "console": "integratedTerminal",
+            "args": ["logout"],
+        },
+        {
+            "name": "Simulate Login",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
+            "console": "integratedTerminal",
+            "args": ["", "--commit"],
+        },
+        {
+            "name": "Simulate Sync",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
+            "console": "integratedTerminal",
+            "args": ["pref sync", "--commit"],
         }
     ]
 }

@@ -3,7 +3,6 @@ import time
 
 from peewee import TextField, CharField
 
-from mstodo.models.fields import DateTimeUTCField
 from mstodo.models.base import BaseModel
 from mstodo.util import NullHandler
 
@@ -32,7 +31,7 @@ class User(BaseModel):
         start = time.time()
         instance = None
         user_data = user.user()
-        log.info('Retrieved User in %s', time.time() - start)
+        log.info('Retrieved User in %0.3f' % (time.time() - start))
 
         try:
             instance = cls.get()

@@ -1,7 +1,6 @@
 import logging
 import time
 
-from concurrent import futures
 from requests import codes
 
 import mstodo.api.base as api
@@ -11,29 +10,29 @@ from mstodo.util import NullHandler
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
 
-def taskFolders(order='display', task_counts=False):
+def taskfolders(order='display', task_counts=False):
     log.info('entered api/taskfolders')
     start = time.time()
-    query = '?$top='+config.MS_TODO_PAGE_SIZE+'&count=true'
-    next_link = "me/outlook/taskFolders" + query
-    taskFolders = []
+    query = f"?$top={config.MS_TODO_PAGE_SIZE}&count=true"
+    next_link = f"me/outlook/taskFolders{query}"
+    taskfolders = []
     while True:
         req = api.get(next_link)
-        taskFolders.extend(req.json()['value'])
+        taskfolders.extend(req.json()['value'])
         if '@odata.nextLink' in req.json():
             next_link= req.json()['@odata.nextLink'].replace(config.MS_TODO_API_BASE_URL + '/','')
         else:
-            log.info('Retrieved taskFolders in %s', time.time() - start)
+            log.info('Retrieved taskFolders in %0.3f seconds' % (time.time() - start))
             break
 
     if task_counts:
-        for taskFolder in taskFolders:
-            update_taskfolder_with_tasks_count(taskFolder)
+        for taskfolder in taskfolders:
+            update_taskfolder_with_tasks_count(taskfolder)
 
-    return taskFolders
+    return taskfolders
 
-def taskFolder(id, task_counts=False):
-    req = api.get('me/outlook/taskFolders/' + id)
+def taskfolder(id, task_counts=False):
+    req = api.get(f"me/outlook/taskFolders/{id}")
     info = req.json()
 
     #@TODO: run this request in parallel
@@ -44,9 +43,9 @@ def taskFolder(id, task_counts=False):
 
 def taskfolder_tasks_count(id):
     info = {}
-    req = api.get('taskFolders/'+id+"/tasks?$count=true&$top=1&$filter=status+ne+'completed'")
+    req = api.get(f"taskFolders/{id}/tasks?$count=true&$top=1&$filter=status+ne+'completed'")
     info['uncompleted_count'] = req.json()['@odata.count']
-    req = api.get('taskFolders/'+id+"/tasks?$count=true&$top=1&$filter=status+eq+'completed'")
+    req = api.get(f"taskFolders/{id}/tasks?$count=true&$top=1&$filter=status+eq+'completed'")
     info['completed_count'] = req.json()['@odata.count']
 
     return info
@@ -59,13 +58,13 @@ def update_taskfolder_with_tasks_count(info):
 
     return info
 
-def create_taskFolder(title):
+def create_taskfolder(title):
     req = api.post('me/outlook/taskFolders', {'name': title})
     info = req.json()
 
     return req
 
-def delete_taskFolder(id):
+def delete_taskfolder(id):
     req = api.delete('me/outlook/taskFolders/' + id)
 
     return req.status_code == codes.no_content

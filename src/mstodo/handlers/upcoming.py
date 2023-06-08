@@ -4,18 +4,15 @@ from datetime import date, datetime, timedelta
 import logging
 
 from peewee import JOIN, OperationalError
-from workflow.background import is_running
 
 from mstodo import icons
 from mstodo.models.preferences import Preferences
 from mstodo.models.task import Task
 from mstodo.models.taskfolder import TaskFolder
-from mstodo.sync import background_sync, background_sync_if_necessary, sync
-from mstodo.util import relaunch_alfred, workflow
+from mstodo.sync import background_sync, background_sync_if_necessary
+from mstodo.util import relaunch_alfred, wf_wrapper
 
-log = logging.getLogger('mstodo')
-
-_hashtag_prompt_pattern = r'#\S*$'
+log = logging.getLogger(__name__)
 
 _durations = [
     {
@@ -42,7 +39,7 @@ _durations = [
 
 
 def _default_label(days):
-    return 'In the next %d day%s' % (days, '' if days == 1 else 's')
+    return f"In the next {days} day{'' if days == 1 else 's'}"
 
 
 def _duration_info(days):
@@ -50,17 +47,16 @@ def _duration_info(days):
 
     if len(duration_info) > 0:
         return duration_info[0]
-    else:
-        return {
-            'days': days,
-            'label': _default_label(days),
-            'subtitle': 'Your custom duration',
-            'custom': True
-        }
+    return {
+        'days': days,
+        'label': _default_label(days),
+        'subtitle': 'Your custom duration',
+        'custom': True
+    }
 
 
 def filter(args):
-    wf = workflow()
+    wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     command = args[1] if len(args) > 1 else None
     duration_info = _duration_info(prefs.upcoming_duration)
@@ -78,22 +74,25 @@ def filter(args):
         duration_info = _duration_info(selected_duration)
 
         if 'custom' in duration_info:
-            wf.add_item(duration_info['label'], duration_info['subtitle'], arg='-upcoming duration %d' % (duration_info['days']), valid=True, icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO)
+            wf.add_item(duration_info['label'], duration_info['subtitle'],
+                        arg=f"-upcoming duration {duration_info['days']}", valid=True,
+                        icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO
+            )
 
         for duration_info in _durations:
-            wf.add_item(duration_info['label'], duration_info['subtitle'], arg='-upcoming duration %d' % (duration_info['days']), valid=True, icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO)
+            wf.add_item(duration_info['label'], duration_info['subtitle'],
+                        arg=f"-upcoming duration {duration_info['days']}", valid=True,
+                        icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO)
 
         wf.add_item('Back', autocomplete='-upcoming ', icon=icons.BACK)
 
         return
 
     # Force a sync if not done recently or join if already running
-    if not prefs.last_sync or \
-       datetime.utcnow() - prefs.last_sync > timedelta(seconds=30) or \
-       is_running('sync'):
-        sync()
+    background_sync_if_necessary()
 
-    wf.add_item(duration_info['label'], subtitle='Change the duration for upcoming tasks', autocomplete='-upcoming duration ', icon=icons.UPCOMING)
+    wf.add_item(duration_info['label'], subtitle='Change the duration for upcoming tasks',
+                autocomplete='-upcoming duration ', icon=icons.UPCOMING)
 
     conditions = True
 
@@ -109,21 +108,19 @@ def filter(args):
         (Task.status != 'completed') &
         (Task.dueDateTime < datetime.now() + timedelta(days=duration_info['days'] + 1)) &
         (Task.dueDateTime > datetime.now() + timedelta(days=1)) &
-        Task.list_id.is_null(False) &
+        Task.list.is_null(False) &
         conditions
     )\
         .order_by(Task.dueDateTime.asc(), Task.reminderDateTime.asc(), Task.lastModifiedDateTime.asc())
 
     try:
-        for t in tasks:
-            wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s ' % t.id, icon=icons.TASK_COMPLETED if t.status == 'completed' else icons.TASK)
+        for task in tasks:
+            wf.add_item(f"{task.list_title} – {task.title}", task.subtitle(), autocomplete=f"-task {task.id} ",
+                        icon=icons.TASK_COMPLETED if task.status == 'completed' else icons.TASK)
     except OperationalError:
         background_sync()
 
     wf.add_item('Main menu', autocomplete='', icon=icons.BACK)
-
-    # Make sure tasks stay up-to-date
-    background_sync_if_necessary(seconds=2)
 
 def commit(args, modifier=None):
     relaunch_command = None

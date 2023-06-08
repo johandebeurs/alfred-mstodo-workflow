@@ -11,7 +11,7 @@ from mstodo.models.taskfolder import TaskFolder
 from mstodo.models.preferences import Preferences
 from mstodo.models.task import Task
 from mstodo.sync import background_sync
-from mstodo.util import workflow
+from mstodo.util import wf_wrapper
 
 log = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ _hashtag_prompt_pattern = re.compile(r'#\S*$', re.UNICODE)
 
 def filter(args):
     query = ' '.join(args[1:])
-    wf = workflow()
+    wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     matching_hashtags = []
 
@@ -45,11 +45,13 @@ def filter(args):
     # hashtag being typed does not exactly match the single matching hashtag
     if len(matching_hashtags) > 0:
         for hashtag in matching_hashtags:
-            wf.add_item(hashtag.tag[1:], '', autocomplete=u'-search %s%s ' % (query[:hashtag_match.start()], hashtag.tag), icon=icons.HASHTAG)
+            wf.add_item(hashtag.tag[1:], '',
+                        autocomplete=f"-search {query[:hashtag_match.start()]}{hashtag.tag} ",
+                        icon=icons.HASHTAG)
 
     else:
         conditions = True
-        taskfolders = workflow().stored_data('taskfolders')
+        taskfolders = wf.stored_data('taskfolders')
         matching_taskfolders = None
         query = ' '.join(args[1:]).strip()
         taskfolder_query = None
@@ -63,10 +65,10 @@ def filter(args):
             components = re.split(r':\s*', query, 1)
             taskfolder_query = components[0]
             if taskfolder_query:
-                matching_taskfolders = workflow().filter(
+                matching_taskfolders = wf.filter(
                     taskfolder_query,
                     taskfolders if taskfolders else [],
-                    lambda f: f['title'],
+                    lambda folder: folder['title'],
                     # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                     match_on=MATCH_ALL ^ MATCH_ALLCHARS
                 )
@@ -79,9 +81,9 @@ def filter(args):
                 # anything else. This takes care of taskfolders that are substrings
                 # of other taskfolders
                 if len(matching_taskfolders) > 1:
-                    for f in matching_taskfolders:
-                        if f['title'].lower() == taskfolder_query.lower():
-                            matching_taskfolders = [f]
+                    for folder in matching_taskfolders:
+                        if folder['title'].lower() == taskfolder_query.lower():
+                            matching_taskfolders = [folder]
                             break
 
         if matching_taskfolders:
@@ -89,9 +91,9 @@ def filter(args):
                 wf.add_item('Browse by hashtag', autocomplete='-search #', icon=icons.HASHTAG)
 
             if len(matching_taskfolders) > 1:
-                for f in matching_taskfolders:
-                    icon = icons.INBOX if f['isDefaultFolder'] else icons.LIST
-                    wf.add_item(f['title'], autocomplete='-search %s: ' % f['title'], icon=icon)
+                for folder in matching_taskfolders:
+                    icon = icons.INBOX if folder['isDefaultFolder'] else icons.LIST
+                    wf.add_item(folder['title'], autocomplete=f"-search {folder['title']}: ", icon=icon)
             else:
                 conditions = conditions & (Task.list == matching_taskfolders[0]['id'])
 
@@ -112,16 +114,20 @@ def filter(args):
                 tasks = tasks.limit(50)
 
                 try:
-                    for t in tasks:
-                        wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s  ' % t.id, icon=icons.TASK_COMPLETED if t.status == 'completed' else icons.TASK) 
+                    for task in tasks:
+                        wf.add_item(f"{task.list_title} – {task.title}", task.subtitle(),
+                                    autocomplete=f"-task {task.id}  ",
+                                    icon=icons.TASK_COMPLETED if task.status == 'completed' else icons.TASK)
                 except OperationalError:
                     background_sync()
 
 
             if prefs.show_completed_tasks:
-                wf.add_item('Hide completed tasks', arg='-pref show_completed_tasks --alfred %s' % ' '.join(args), valid=True, icon=icons.HIDDEN)
+                wf.add_item('Hide completed tasks', arg=f"-pref show_completed_tasks --alfred {' '.join(args)}",
+                            valid=True, icon=icons.HIDDEN)
             else:
-                wf.add_item('Show completed tasks', arg='-pref show_completed_tasks --alfred %s' % ' '.join(args), valid=True, icon=icons.VISIBLE)
+                wf.add_item('Show completed tasks', arg=f"-pref show_completed_tasks --alfred {' '.join(args)}",
+                            valid=True, icon=icons.VISIBLE)
 
         wf.add_item('New search', autocomplete='-search ', icon=icons.CANCEL)
         wf.add_item('Main menu', autocomplete='', icon=icons.BACK)

@@ -1,6 +1,6 @@
 Microsoft ToDo Workflow for Alfred (Beta)
 ==========================
-Work-in-progress [Alfred](http://www.alfredapp.com/) workflow for [Microsoft ToDo](http://todo.microsoft.com) (requires Alfred 2/3/4 with a Powerpack license).
+Work-in-progress [Alfred](http://www.alfredapp.com/) workflow for [Microsoft ToDo](http://todo.microsoft.com) (requires Alfred 5 with a Powerpack license, and Python3 installed on your system and available in $PATH).
 
 Beginner and advanced approaches to adding a monthly repeating task beginning the following week:
 
@@ -62,7 +62,7 @@ You can also select a list *after* typing your task with the "in" keyword. To av
 
 ### Reminders
 
-Microsoft ToDo uses alerts to remind you about tasks that are due, either on the due date or in advance. To set a reminder, either include a time with your due date or use an explicit reminder phrase like *remind me at 3:00pm on June 11*).
+Microsoft ToDo uses alerts to remind you about tasks that are due, either on the due date or in advance. To set a reminder, either include a time with your due date or use an explicit reminder phrase like *remind me at 3:00pm on June 11*.
 
 #### Examples
 
@@ -206,22 +206,22 @@ Limitations
 Contributing
 ------------
 
-So you want to help make this workflow better? That's great! After cloning the repository, run `npm install && grunt` to build the workflow. Open the mstodo-symlinked.alfredworkflow file to install a copy in Alfred that will update whenever you rebuild the workflow. After making a change, simply run `grunt build` to update the workflow then use Alfred to test. Using this process, the workflow is kept up-to-date while you work.
+So you want to help make this workflow better? That's great! After cloning the repository, activate a virtual environment (I recommend using `python -m venv .venv && source .venv/bin/activate`), then run `pip install -r requirements.txt --target=./lib` and `pip install -r requirements-dev.txt` to set up the environment for building. Running `invoke -r build build` will build the workflow for development. Open the _mstodo-symlinked.alfredworkflow_ file to install a copy in Alfred that will update whenever you rebuild the workflow. Run `invoke -r build watch` to monitor the /src folder and automatically re-build the workflow on any file changes. Using this process, the workflow is kept up-to-date while you work.
+
+Settings and launch configs for VSCode are included in the git repo to smooth development and testing if you are using this IDE, including altering pythonpath for debugging. You may want to replicate/modify these if you are using Pycharm or other editors.
 
 Always run through the tests to ensure that your change does not cause issues elsewhere. When possible, add corresponding tests for your contributions.
-
-Yes, this runs Py2.7. No it won't be updated any time soon, particularly as it relies on Alfred-Workflow which isn't being updated until MacOS ships with Py3 as the default kernel. Complain to Apple if you like, not to me.
 
 Testing
 -------
 
-Unit tests are run automatically on every commit to reduce the likelihood of introducing a bug. Nevertheless, your feedback is crucial if anything seems to be broken.
+Unit tests should be run before committing to reduce the likelihood of introducing a bug. Your feedback is crucial if anything seems to be broken.
 
-Contributors can use the command `grunt test` to run the test suite and should do so to validate changes in any pull requests. If you add functionality, please back it with unit tests.
+Contributors can use the command `invoke -r build test` to run the test suite and should do so to validate changes in any pull requests. If you add functionality, please back it with unit tests.
 
 Acknowledgements
 ----------------
 
-This workflow is a fork of the great foundation [Alfred-Wunderlist](http://github.com/idpaterson/alfred-wunderlist-workflow) by [Ian Paterson](https://github.com/idpaterson), which itself relies on the fantastic [Alfred-Workflow](https://github.com/deanishe/alfred-workflow) by [Dean Jackson](https://github.com/deanishe) to communicate with Alfred. The Alfred-Workflow library source code is bundled with the workflow and also included with the repository as a submodule.
+This workflow is a re-write of [Alfred-Wunderlist](http://github.com/idpaterson/alfred-wunderlist-workflow) by [Ian Paterson](https://github.com/idpaterson), updated for Python 3, MacOS 13 (Ventura) and Alfred 5.
 
 Much of the natural language date processing is powered by [parsedatetime](https://github.com/bear/parsedatetime), a tremendously powerful date parser built by [Mike Taylor](https://github.com/bear) and various contributors. [Peewee](https://github.com/coleifer/peewee) by [Charles Leifer](https://github.com/coleifer) provides a simple interface to store and query synced data retrieved from Microsoft ToDo using [Requests](https://github.com/kennethreitz/requests) by [Kenneth Reitz](https://github.com/kennethreitz). The source code of all three libraries is bundled with the workflow and each is included in the repository as a submodule.

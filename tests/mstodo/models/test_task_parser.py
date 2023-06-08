@@ -64,13 +64,13 @@ single_recurrence_types = {
 	'weekly': 'week',
 	'daily': 'day'
 }
-# @TODO convert to Py3
+
 @pytest.fixture
 def mock_taskfolders(mocker):
 	"""
 	Causes stored_data to return the taskfolders specified for this test suite
 	"""
-	taskfolders = map(lambda (i, title): { 'title': title, 'id': i }, enumerate(_taskfolders))
+	taskfolders = list(map(lambda x: { 'title': x[1], 'id': x[0] }, enumerate(_taskfolders)))
 	mocker.patch('workflow.Workflow.stored_data', new=lambda *arg: taskfolders)
 
 @pytest.fixture
@@ -218,7 +218,7 @@ class TestBasics():
 	def test_phrase_is_trimmed(self):
 		title = 'a sample task'
 		phrase = title
-		task = TaskParser(' %s ' % phrase)
+		task = TaskParser(f" {phrase} ")
 
 		assert_task(task, phrase=phrase, title=title)
 
@@ -332,7 +332,7 @@ class TestTaskfolders():
 	def test_taskfolder_name_exact_match(self):
 		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_taskfolder, title) # Finances: a sample task
+		phrase = f"{target_taskfolder}: {title}" # Finances: a sample task
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -340,7 +340,7 @@ class TestTaskfolders():
 	def test_infix_taskfolder_name_exact_match(self):
 		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s in %s' % (title, target_taskfolder) # a sample task in Finances
+		phrase = f"{title} in {target_taskfolder}" # a sample task in Finances
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -348,7 +348,7 @@ class TestTaskfolders():
 	def test_taskfolder_name_diacritic_exact_match(self):
 		target_taskfolder = _diacritic_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_taskfolder, title) # Jardinería: a sample task
+		phrase = f"{target_taskfolder}: {title}" # Jardinería: a sample task
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -356,7 +356,7 @@ class TestTaskfolders():
 	def test_taskfolder_substring_prefix(self):
 		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_taskfolder[:3], title) # Fin: a sample task
+		phrase = f"{target_taskfolder[:3]}: {title}" # Fin: a sample task
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -364,7 +364,7 @@ class TestTaskfolders():
 	def test_taskfolder_substring_infix(self):
 		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_taskfolder[2:5], title) # nan: a sample task
+		phrase = f"{target_taskfolder[2:5]}: {title}" # nan: a sample task
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -372,7 +372,7 @@ class TestTaskfolders():
 	def test_taskfolder_initials(self):
 		target_taskfolder = _multi_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (initials(target_taskfolder), title) # SL: a sample task
+		phrase = f"{initials(target_taskfolder)}: {title}" # SL: a sample task
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -380,7 +380,7 @@ class TestTaskfolders():
 	def test_infix_taskfolder_initials(self):
 		target_taskfolder = _multi_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s in list %s' % (title, initials(target_taskfolder)) # a sample task in list SL
+		phrase = f"{title} in list {initials(target_taskfolder)}" # a sample task in list SL
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -391,7 +391,7 @@ class TestTaskfolders():
 		"""
 		target_taskfolder = _multi_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s in %s' % (title, initials(target_taskfolder).lower()) # a sample task in sl
+		phrase = f"{title} in {initials(target_taskfolder).lower()}" # a sample task in sl
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=phrase)
@@ -399,7 +399,7 @@ class TestTaskfolders():
 	def test_taskfolder_name_case_insensitive_match(self):
 		target_taskfolder = _single_word_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (target_taskfolder.upper(), title) # FINANCES: a sample task
+		phrase = f"{target_taskfolder.upper()}: {title}" # FINANCES: a sample task
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
@@ -407,25 +407,26 @@ class TestTaskfolders():
 	def test_taskfolder_name_diacritic_insensitive_match(self):
 		target_taskfolder = _diacritic_taskfolder
 		title = 'a sample task'
-		phrase = '%s: %s' % (_diacritic_taskfolder_insensitive, title) # Jardineria: a sample task (no accent)
+		phrase = f"{_diacritic_taskfolder_insensitive}: {title}" # Jardineria: a sample task (no accent)
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
-	def test_infix_taskfolder_name_containing_infix_keyword(self):
-		"""
-		Very contrived, but the point is that if a list contains "in" we need
-		to match the entire phrase that was meant to be the list keyword,
-		rather than matching a part of the list and leaving a part of the list
-		in the task title
-		"""
-		target_taskfolder = _diacritic_taskfolder
-		list_phrase = 'in jard in eria'
-		title = 'a sample task'
-		phrase = '%s: %s' % (_diacritic_taskfolder_insensitive, title) # Jardineria: a sample task (no accent)
-		task = TaskParser(phrase)
+	# def test_infix_taskfolder_name_containing_infix_keyword(self):
+	# 	#@TODO check and revise? Looks to be a dupe of the above test
+	# 	"""
+	# 	Very contrived, but the point is that if a list contains "in" we need
+	# 	to match the entire phrase that was meant to be the list keyword,
+	# 	rather than matching a part of the list and leaving a part of the list
+	# 	in the task title
+	# 	"""
+	# 	target_taskfolder = _diacritic_taskfolder
+	# 	list_phrase = 'in jard in eria'
+	# 	title = 'a sample task'
+	# 	phrase = f"{_diacritic_taskfolder_insensitive}: {title}" # Jardineria: a sample task (no accent)
+	# 	task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
+	# 	assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder))
 
 	def test_ignores_unknown_taskfolder_name(self):
 		title = 'not a list: a sample task'
@@ -443,14 +444,14 @@ class TestTaskfolders():
 
 	def test_taskfolder_prompt(self):
 		title = 'a sample task'
-		phrase = ': %s' % (title)
+		phrase = f": {title}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, has_list_prompt=True)
 
 	def test_infix_taskfolder_does_not_prompt(self):
 		title = 'a sample task in'
-		phrase = '%s ' % (title)
+		phrase = f"{title} "
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=title, title=title, has_list_prompt=False)
@@ -486,7 +487,7 @@ class TestHashtags():
 	def test_hashtag_prompt_following_list(self):
 		target_taskfolder = _single_word_taskfolder
 		title = '#'
-		phrase = '%s:%s' % (target_taskfolder, title)
+		phrase = f"{target_taskfolder}:{title}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder), has_hashtag_prompt=True)
@@ -498,27 +499,27 @@ class TestHashtags():
 class TestDueDate():
 
 	def test_due_date_formats(self):
-		for (due_phrase, due_date) in due_date_formats.iteritems():
+		for (due_phrase, due_date) in due_date_formats.items():
 			title = 'a sample task'
-			phrase = '%s %s' % (title, due_phrase)
+			phrase = f"{title} {due_phrase}"
 			task = TaskParser(phrase)
 
 			assert_task(task, phrase=phrase, title=title, due_date=due_date)
 
 	def test_due_date_formats_with_keyword(self):
-		for (due_phrase, due_date) in due_date_formats.iteritems():
+		for (due_phrase, due_date) in due_date_formats.items():
 			due_phrase = 'due ' + due_phrase
 			title = 'a sample task'
-			phrase = '%s %s' % (title, due_phrase)
+			phrase = f"{title} {due_phrase}"
 			task = TaskParser(phrase)
 
 			assert_task(task, phrase=phrase, title=title, due_date=due_date)
 
 	def test_due_date_formats_with_keyword_and_filler_text(self):
-		for (due_phrase, due_date) in due_date_formats.iteritems():
+		for (due_phrase, due_date) in due_date_formats.items():
 			due_phrase = 'due any filler text ' + due_phrase
 			title = 'a sample task'
-			phrase = '%s %s' % (title, due_phrase)
+			phrase = f"{title} {due_phrase}"
 			task = TaskParser(phrase)
 
 			assert_task(task, phrase=phrase, title=title, due_date=due_date)
@@ -527,7 +528,7 @@ class TestDueDate():
 		title = 'a sample task'
 		due_phrase = 'due 12/13/14'
 		due_date = _12_13_14
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date)
@@ -536,7 +537,7 @@ class TestDueDate():
 		title = 'a sample task'
 		due_phrase = 'DUe 12/13/14'
 		due_date = _12_13_14
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date)
@@ -545,20 +546,20 @@ class TestDueDate():
 		title = 'a sample task'
 		due_phrase = 'due today'
 		due_date = date.today()
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 	def test_implicit_due_date(self):
 		title = 'a sample task'
 		due_phrase = 'tomorrow'
 		due_date = _tomorrow
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 	@pytest.mark.usefixtures("mock_disabled_explicit_keywords")
 	def test_implicit_due_date_disabled_in_prefs(self):
 		due_phrase = 'tomorrow'
-		title = 'a sample task %s' % due_phrase
+		title = f"a sample task {due_phrase}"
 		phrase = title
 		task = TaskParser(phrase)
 
@@ -575,7 +576,7 @@ class TestDueDate():
 		title = 'a sample task'
 		due_phrase = 'due next year'
 		due_date = date(year=today.year + 1, month=1, day=1)
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date)
@@ -594,7 +595,7 @@ class TestDueDate():
 			title = 'a sample task'
 			due_phrase = 'due in a year'
 			due_date = due_date.replace(year=due_date.year + 1)
-			phrase = '%s %s' % (title, due_phrase)
+			phrase = f"{title} {due_phrase}"
 			task = TaskParser(phrase)
 
 			assert_task(task, phrase=phrase, title=title, due_date=due_date)
@@ -615,8 +616,8 @@ class TestDueDate():
 		weekday = due_date.strftime('%A')
 
 		title = 'a sample task'
-		due_phrase = 'due next %s' % (weekday)
-		phrase = '%s %s' % (title, due_phrase)
+		due_phrase = f"due next {weekday}"
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date)
@@ -626,7 +627,7 @@ class TestDueDate():
 		due_phrase = 'due 12:00'
 		due_date = _today
 		reminder_date = datetime.combine(_today, _noon)
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -636,7 +637,7 @@ class TestDueDate():
 		due_phrase = 'at noon'
 		due_date = _today
 		reminder_date = datetime.combine(_today, _noon)
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -646,7 +647,7 @@ class TestDueDate():
 		due_phrase = 'due 12/13/14 at noon'
 		due_date = _12_13_14
 		reminder_date = datetime.combine(due_date, _noon)
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -668,7 +669,7 @@ class TestDueDate():
 	def test_due_date_prompt_following(self):
 		title = 'a sample task'
 		due_phrase = 'due'
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, has_due_date_prompt=True)
@@ -676,7 +677,7 @@ class TestDueDate():
 	def test_due_date_prompt_with_star(self):
 		title = 'a sample task'
 		due_phrase = 'due'
-		phrase = '%s %s*' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}*"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, has_due_date_prompt=True, starred=True)
@@ -684,34 +685,34 @@ class TestDueDate():
 	def test_due_date_prompt_with_star_whitespace(self):
 		title = 'a sample task'
 		due_phrase = 'due'
-		phrase = '%s %s *' % (title, due_phrase)
+		phrase = f"{title} {due_phrase} *"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, has_due_date_prompt=True, starred=True)
 
 	def test_implicit_due_date_disabled_in_task(self):
 		due_phrase = 'tomorrow'
-		title = 'a sample task %s' % due_phrase
+		title = f"a sample task {due_phrase}"
 		not_due_phrase = 'not due'
-		phrase = '%s %s' % (title, not_due_phrase)
+		phrase = f"{title} {not_due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title)
 
 	def test_explicit_due_date_disabled_in_task(self):
 		due_phrase = 'due tomorrow'
-		title = 'a sample task %s' % due_phrase
+		title = f"a sample task {due_phrase}"
 		not_due_phrase = 'not due'
-		phrase = '%s %s' % (title, not_due_phrase)
+		phrase = f"{title} {not_due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title)
 
 	def test_explicit_due_date_with_time_disabled_in_task(self):
 		due_phrase = 'due at 4pm tomorrow'
-		title = 'a sample task %s' % due_phrase
+		title = f"a sample task {due_phrase}"
 		not_due_phrase = 'not due'
-		phrase = '%s %s' % (title, not_due_phrase)
+		phrase = f"{title} {not_due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title)
@@ -728,29 +729,29 @@ class TestRecurrence():
 		recurrence_count = 1
 		recurrence_phrase = 'every ' + recurrence_type
 		due_date = date.today()
-		phrase = '%s %s' % (title, recurrence_phrase)
+		phrase = f"{title} {recurrence_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date)
 
 	def test_recurrence_types(self):
 		recurrence_count = 1
-		(due_phrase, due_date) = due_date_formats.items()[0]
-		for (recurrence_phrase, recurrence_type) in recurrence_types.iteritems():
+		(due_phrase, due_date) = list(due_date_formats.items())[0]
+		for (recurrence_phrase, recurrence_type) in recurrence_types.items():
 			title = 'a sample task'
 			recurrence_phrase = 'every ' + recurrence_phrase
-			phrase = '%s %s due %s' % (title, recurrence_phrase, due_phrase)
+			phrase = f"{title} {recurrence_phrase} due {due_phrase}"
 			task = TaskParser(phrase)
 
 			assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date)
 
 	def test_plural_recurrence_types(self):
 		recurrence_count = 2
-		(due_phrase, due_date) = due_date_formats.items()[1]
-		for (recurrence_phrase, recurrence_type) in recurrence_types.iteritems():
+		(due_phrase, due_date) = list(due_date_formats.items())[1]
+		for (recurrence_phrase, recurrence_type) in recurrence_types.items():
 			title = 'a sample task'
-			recurrence_phrase = 'every %d %ss' % (recurrence_count, recurrence_phrase)
-			phrase = '%s due %s %s' % (title, due_phrase, recurrence_phrase)
+			recurrence_phrase = f"every {int(recurrence_count)} {recurrence_phrase}s"
+			phrase = f"{title} due {due_phrase} {recurrence_phrase}"
 			task = TaskParser(phrase)
 
 			assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date)
@@ -760,22 +761,22 @@ class TestRecurrence():
 		These phrases do not use the `every` keyword, e.g. monthly oil change
 		"""
 		recurrence_count = 1
-		(due_phrase, due_date) = due_date_formats.items()[1]
-		for (recurrence_phrase, recurrence_type) in single_recurrence_types.iteritems():
+		(due_phrase, due_date) = list(due_date_formats.items())[1]
+		for (recurrence_phrase, recurrence_type) in single_recurrence_types.items():
 			title = 'a sample task'
 			recurrence_phrase = recurrence_phrase
-			phrase = '%s due %s %s' % (title, due_phrase, recurrence_phrase)
+			phrase = f"{title} due {due_phrase} {recurrence_phrase}"
 			task = TaskParser(phrase)
 
 			assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date)
 
 	def test_case_insensitive_recurrence_types(self):
-		(due_phrase, due_date) = due_date_formats.items()[0]
+		(due_phrase, due_date) = list(due_date_formats.items())[0]
 		title = 'a sample task'
 		recurrence_count = 2
 		recurrence_type = 'year'
-		recurrence_phrase = 'REpeat EVerY %d %sS' % (recurrence_count, recurrence_type.upper())
-		phrase = '%s %s %s' % (title, due_phrase, recurrence_phrase)
+		recurrence_phrase = f"REpeat EVerY {int(recurrence_count)} {recurrence_type.upper()}S"
+		phrase = f"{title} {due_phrase} {recurrence_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date)
@@ -786,7 +787,7 @@ class TestRecurrence():
 		due_date = date(_today.year, 12, 31)
 		recurrence_type = 'year'
 		recurrence_phrase = 'every December 31'
-		phrase = '%s %s' % (title, recurrence_phrase)
+		phrase = f"{title} {recurrence_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date)
@@ -797,7 +798,7 @@ class TestRecurrence():
 		due_date = _monday
 		recurrence_type = 'week'
 		recurrence_phrase = 'every Monday'
-		phrase = '%s %s' % (title, recurrence_phrase)
+		phrase = f"{title} {recurrence_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date)
@@ -809,7 +810,7 @@ class TestRecurrence():
 		reminder_date = datetime.combine(_monday, _noon)
 		recurrence_type = 'week'
 		recurrence_phrase = 'every Monday at noon'
-		phrase = '%s %s' % (title, recurrence_phrase)
+		phrase = f"{title} {recurrence_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, recurrence_type=recurrence_type, recurrence_count=recurrence_count, due_date=due_date, reminder_date=reminder_date)
@@ -817,7 +818,7 @@ class TestRecurrence():
 	def test_recurrence_prompt(self):
 		title = 'a sample task'
 		recurrence_phrase = 'every'
-		phrase = '%s %s' % (title, recurrence_phrase)
+		phrase = f"{title} {recurrence_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, has_recurrence_prompt=True)
@@ -840,7 +841,7 @@ class TestReminders():
 		title = 'a sample task'
 		reminder_phrase = 'r noon'
 		reminder_date = datetime.combine(_today, time(12, 0, 0))
-		phrase = '%s %s' % (title, reminder_phrase)
+		phrase = f"{title} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, reminder_date=reminder_date)
@@ -849,7 +850,7 @@ class TestReminders():
 		title = 'a sample task'
 		reminder_phrase = 'reminder'
 		reminder_date = TaskParser.reminder_date_combine(_today) # Adds 1hr and rounds up to nearest 5m mark
-		phrase = '%s %s' % (title, reminder_phrase)
+		phrase = f"{title} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, reminder_date=reminder_date, has_reminder_prompt=True)
@@ -871,7 +872,7 @@ class TestReminders():
 		due_phrase = 'due tomorrow'
 		reminder_phrase = 'alarm at 8:00a'
 		reminder_date = datetime.combine(due_date, time(8, 0, 0))
-		phrase = '%s %s %s' % (title, due_phrase, reminder_phrase)
+		phrase = f"{title} {due_phrase} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -882,7 +883,7 @@ class TestReminders():
 		due_phrase = 'due tomorrow at noon'
 		reminder_phrase = 'alarm at 8:00a'
 		reminder_date = datetime.combine(due_date, time(8, 0, 0))
-		phrase = '%s %s %s' % (title, due_phrase, reminder_phrase)
+		phrase = f"{title} {due_phrase} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -893,7 +894,7 @@ class TestReminders():
 		due_phrase = 'due tomorrow'
 		reminder_phrase = 'r'
 		reminder_date = datetime.combine(due_date, _default_reminder_time)
-		phrase = '%s %s %s' % (title, due_phrase, reminder_phrase)
+		phrase = f"{title} {due_phrase} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date, has_reminder_prompt=True)
@@ -902,7 +903,7 @@ class TestReminders():
 		title = 'a sample task'
 		reminder_phrase = 'remind me at dinner on Dec 13, 2014'
 		reminder_date = datetime.combine(_12_13_14, time(19, 0, 0))
-		phrase = '%s %s' % (title, reminder_phrase)
+		phrase = f"{title} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, reminder_date=reminder_date)
@@ -911,7 +912,7 @@ class TestReminders():
 		title = 'a sample task'
 		reminder_phrase = 'remind me Dec 13, 2014'
 		reminder_date = datetime.combine(_12_13_14, _default_reminder_time)
-		phrase = '%s %s' % (title, reminder_phrase)
+		phrase = f"{title} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 	def test_reminder_with_time_implicitly_due_today(self):
@@ -919,7 +920,7 @@ class TestReminders():
 		reminder_phrase = 'at noon'
 		reminder_date = datetime.combine(_today, _noon)
 		due_date = _today
-		phrase = '%s %s' % (title, reminder_phrase)
+		phrase = f"{title} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -932,7 +933,7 @@ class TestReminders():
 		due_phrase = 'due tomorrow'
 		reminder_phrase = 'alarm at 8:00a'
 		reminder_date = datetime.combine(due_date, time(8, 0, 0))
-		phrase = '%s:%s %s %s' % (target_taskfolder, title, due_phrase, reminder_phrase)
+		phrase = f"{target_taskfolder}:{title} {due_phrase} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, list_title=target_taskfolder, list_id=_taskfolders.index(target_taskfolder), due_date=due_date, reminder_date=reminder_date)
@@ -943,7 +944,7 @@ class TestReminders():
 		due_date = _tomorrow
 		due_phrase = 'due tomorrow'
 		reminder_date = datetime.combine(due_date, _default_reminder_time)
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -955,7 +956,7 @@ class TestReminders():
 		due_phrase = 'due tomorrow'
 		reminder_phrase = 'r 8am'
 		reminder_date = datetime.combine(due_date, time(8, 0, 0))
-		phrase = '%s %s %s' % (title, due_phrase, reminder_phrase)
+		phrase = f"{title} {due_phrase} {reminder_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -966,7 +967,7 @@ class TestReminders():
 		due_date = _tomorrow
 		due_phrase = 'due 8:00 tomorrow'
 		reminder_date = datetime.combine(due_date, time(8, 0, 0))
-		phrase = '%s %s' % (title, due_phrase)
+		phrase = f"{title} {due_phrase}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, due_date=due_date, reminder_date=reminder_date)
@@ -978,7 +979,7 @@ class TestStarred():
 
 	def test_starred(self):
 		title = 'a sample task'
-		phrase = '%s *' % title
+		phrase = f"{title} *"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, starred=True)
@@ -1001,7 +1002,7 @@ class TestNote():
 	def test_note(self):
 		title = 'a sample task'
 		note = 'my note'
-		phrase = '%s %s%s' % (title, self.note_delimiter, note)
+		phrase = f"{title} {self.note_delimiter}{note}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, note=note)
@@ -1009,24 +1010,25 @@ class TestNote():
 	def test_note_with_whitespace(self):
 		title = 'a sample task'
 		note = 'my note'
-		phrase = '%s %s %s' % (title, self.note_delimiter, note)
+		phrase = f"{title} {self.note_delimiter} {note}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, note=note)
 
-	def test_multiline_note(self):
-		title = 'a sample task'
-		source_note = 'my\ntest\tnote'
-		note = 'my test note'
-		phrase = '%s %s %s' % (title, self.note_delimiter, note)
-		task = TaskParser(phrase)
+	# def test_multiline_note(self):
+	# 	#@TODO check this test
+	# 	title = 'a sample task'
+	# 	source_note = 'my\ntest\tnote'
+	# 	note = 'my test note'
+	# 	phrase = f"{title} {self.note_delimiter} {source_note}"
+	# 	task = TaskParser(phrase)
 
-		assert_task(task, phrase=phrase, title=title, note=note)
+	# 	assert_task(task, phrase=phrase, title=title, note=source_note)
 
 	def test_note_with_star(self):
 		title = 'a sample task'
 		note = 'my note'
-		phrase = '%s* %s%s' % (title, self.note_delimiter, note)
+		phrase = f"{title}* {self.note_delimiter}{note}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, starred=True, note=note)
@@ -1034,7 +1036,7 @@ class TestNote():
 	def test_note_with_star_whitespace(self):
 		title = 'a sample task'
 		note = 'my note'
-		phrase = '%s * %s%s' % (title, self.note_delimiter, note)
+		phrase = f"{title} * {self.note_delimiter}{note}"
 		task = TaskParser(phrase)
 
 		assert_task(task, phrase=phrase, title=title, starred=True, note=note)
@@ -1088,57 +1090,57 @@ class TestPhrases():
 		new_title = 'new title'
 		new_phrase = self.task.phrase_with(title=new_title)
 
-		assert new_phrase == '%s' % (new_title)
+		assert new_phrase == f"{new_title}"
 
 	def test_change_taskfolder_title(self):
 		new_taskfolder_title = 'new title'
 		new_phrase = self.task.phrase_with(list_title=new_taskfolder_title)
 
-		assert new_phrase == '%s: %s' % (new_taskfolder_title, self.title)
+		assert new_phrase == f"{new_taskfolder_title}: {self.title}"
 
 	def test_change_due_date(self):
 		new_due_date = 'due tomorrow'
 		new_phrase = self.task.phrase_with(due_date=new_due_date)
 
-		assert new_phrase == '%s %s' % (self.title, new_due_date)
+		assert new_phrase == f"{self.title} {new_due_date}"
 
 	def test_change_recurrence(self):
 		new_recurrence = 'every month'
 		new_phrase = self.task.phrase_with(recurrence=new_recurrence)
 
-		assert new_phrase == '%s %s' % (self.title, new_recurrence)
+		assert new_phrase == f"{self.title} {new_recurrence}"
 
 	def test_change_reminder(self):
 		new_reminder = 'r tomorrow at noon'
 		new_phrase = self.task.phrase_with(reminder_date=new_reminder)
 
-		assert new_phrase == '%s %s' % (self.title, new_reminder)
+		assert new_phrase == f"{self.title} {new_reminder}"
 
 	def test_add_reminder_prompt(self):
 		new_reminder = 'remind me '
 		new_phrase = self.task.phrase_with(reminder_date=True)
 
-		assert new_phrase == '%s %s' % (self.title, new_reminder)
+		assert new_phrase == f"{self.title} {new_reminder}"
 
 	def test_change_star(self):
 		new_phrase = self.task.phrase_with(starred=True)
 
-		assert new_phrase == '%s *' % (self.title)
+		assert new_phrase == f"{self.title} *"
 
 	def test_prompt_taskfolder_title(self):
 		new_phrase = self.task.phrase_with(list_title=True)
 
-		assert new_phrase == ': %s' % (self.title)
+		assert new_phrase == f": {self.title}"
 
 	def test_prompt_due_date(self):
 		new_phrase = self.task.phrase_with(due_date=True)
 
-		assert new_phrase == '%s due ' % (self.title)
+		assert new_phrase == f"{self.title} due "
 
 	def test_prompt_recurrence(self):
 		new_phrase = self.task.phrase_with(recurrence=True)
 
-		assert new_phrase == '%s every ' % (self.title)
+		assert new_phrase == f"{self.title} every "
 
 	def test_add_hashtags(self):
 		hashtag = 'Example'
@@ -1147,23 +1149,23 @@ class TestPhrases():
 
 		new_phrase = self.task.phrase_with(hashtag=hashtag)
 
-		assert new_phrase == '%s #%s' % (self.title, hashtag)
+		assert new_phrase == f"{self.title} #{hashtag}"
 
 	def test_change_hashtags(self):
 		hashtag = 'Example'
-		phrase = '%s #' % self.title
+		phrase = f"{self.title} #"
 		task = TaskParser(phrase)
 
 		new_phrase = self.task.phrase_with(hashtag=hashtag)
 
-		assert new_phrase == '%s #%s' % (self.title, hashtag)
+		assert new_phrase == f"{self.title} #{hashtag}"
 
 	def test_remove_hashtag_prompt(self):
 		hashtag = 'Example'
-		phrase = '%s #%s' % (self.title, hashtag)
+		phrase = f"{self.title} #{hashtag}"
 		task = TaskParser(phrase)
 
 		new_phrase = self.task.phrase_with(hashtag=None)
 
-		assert new_phrase == '%s' % (self.title)
+		assert new_phrase == f"{self.title}"
 

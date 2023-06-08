@@ -1,16 +1,15 @@
 *.pyc
 *.pyo
 *.orig
+**/.DS_Store
+**/__pycache__
 
-/dist
-
-/.tmp
-
-/htmlcov
-.coverage
-
-node_modules
-app/www/bower_components
-
+.venv
+.tmp
+.pytest_cache
+lib
+dist
 mstodo-*.alfredworkflow
-/.vscode
+workflow.log*
+pylint.json
+
