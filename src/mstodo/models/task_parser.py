@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 from workflow import MATCH_ALL, MATCH_ALLCHARS
 
 from mstodo.models.preferences import Preferences, DEFAULT_TASKFOLDER_MOST_RECENT
-from mstodo.util import parsedatetime_calendar, workflow
+from mstodo.util import parsedatetime_calendar, wf_wrapper
 
 # Up to 8 words (sheesh!) followed by a colon
 LIST_TITLE_PATTERN = re.compile(r'^((?:[^\s:]+ *){0,8}):',
@@ -92,7 +92,7 @@ class TaskParser(object):
         cls = type(self)
         phrase = self.phrase
         cal = parsedatetime_calendar()
-        wf = workflow()
+        wf = wf_wrapper()
         taskfolders = wf.stored_data('taskfolders')
         prefs = Preferences.current_prefs()
         ignore_due_date = False
@@ -173,7 +173,8 @@ class TaskParser(object):
                             # If the date expression is only one word and the next
                             # due date is less than one week from now, set a
                             # weekly recurrence, e.g. every Tuesday
-                            if len(date_expression.split(' ')) == 1 and self.due_date < date.today() + timedelta(days=8):
+                            if len(date_expression.split(' ')) == 1 \
+                                and self.due_date < date.today() + timedelta(days=8):
                                 self.recurrence_count = 1
                                 self.recurrence_type = 'week'
                             # Otherwise expect a multi-word value like a date,
@@ -400,8 +401,11 @@ class TaskParser(object):
 
         return datetime.combine(date_component, time_component)
 
-    def phrase_with(self, title=None, list_title=None, due_date=None, recurrence=None, reminder_date=None, hashtag=None, starred=None):
+    def phrase_with(self, title=None, list_title=None, due_date=None,
+                    recurrence=None, reminder_date=None, hashtag=None, starred=None):
         components = []
+        #@TODO research this logic, assuming it is correct pythonic usage based on examples from other packages
+        basestring = str
 
         # Retain the current list
         if list_title is None:

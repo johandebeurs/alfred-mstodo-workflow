@@ -27,7 +27,7 @@ class Hashtag(BaseModel):
                 hashtags[tag.lower()] = tag
 
         if len(hashtags) > 0:
-            hashtag_data = [{'id': id, 'tag': tag, 'revision': 0} for (id, tag) in hashtags.iteritems()]
+            hashtag_data = [{'id': id, 'tag': tag, 'revision': 0} for (id, tag) in hashtags.items()]
             instances = cls.select()
 
             return cls._perform_updates(instances, hashtag_data)

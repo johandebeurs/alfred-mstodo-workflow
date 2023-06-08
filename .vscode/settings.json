@@ -1,3 +1,6 @@
 {
-    "python.pythonPath": "/Users/johan/opt/anaconda3/envs/mstodo/bin/python"
+    "python.analysis.extraPaths": [
+        "./src/workflow",
+        "./lib"
+    ]
 }

@@ -1,15 +1,15 @@
-from datetime import datetime
 import os
 import time
+import logging
+from datetime import datetime
 
 from workflow.notify import notify
 from workflow.background import is_running
 
-from mstodo.models.preferences import Preferences
-from mstodo.util import workflow
+from mstodo.util import wf_wrapper
 
-import logging
-log = logging.getLogger('mstodo')
+log = logging.getLogger(__name__)
+wf = wf_wrapper()
 
 def sync(background=False):
     log.info('running mstodo/sync')
@@ -25,14 +25,24 @@ def sync(background=False):
                 time.sleep(.25)
                 wait_count += 1
 
-                if wait_count == 2:
-                    notify('Please wait...', 'The workflow is making sure your tasks are up-to-date')
+                if wait_count >= 2:
+                    notify(
+                        title='Please wait...',
+                        message='The workflow is making sure your tasks are up-to-date'
+                    )
 
             return False
 
-        pidfile = workflow().cachefile('sync.pid')
-        with open(pidfile, 'wb') as file_obj:
-            file_obj.write('{0}'.format(os.getpid()))
+        notify(
+            title='Manual sync initiated',
+            message='The workflow is making sure your tasks are up-to-date'
+        )
+
+        pidfile = wf.cachefile('sync.pid')
+        with open(pidfile, 'w', encoding="utf-8") as file_obj:
+            #@TODO check if this needs to be byte-written? May be due to pickling the program state?
+            # file_obj.write(os.getpid().to_bytes(length=4, byteorder=sys.byteorder))
+            file_obj.write(str(os.getpid()))
 
 
     base.BaseModel._meta.database.create_tables([
@@ -49,7 +59,7 @@ def sync(background=False):
         hashtag.Hashtag.select().where(hashtag.Hashtag.tag == '').count()
     except OperationalError:
         base.BaseModel._meta.database.close()
-        workflow().clear_data(lambda f: 'mstodo.db' in f)
+        wf.clear_data(lambda f: 'mstodo.db' in f)
 
         # Make sure that this sync does not try to wait until its own process
         # finishes
@@ -57,15 +67,17 @@ def sync(background=False):
         return
 
     first_sync = False
-    
 
     try:
-        # get root item from DB. If it doesn't exist then make this the first sync. 
+        # get root item from DB. If it doesn't exist then make this the first sync.
         user.User.get()
     except user.User.DoesNotExist:
         first_sync = True
-        Preferences.current_prefs().last_sync = datetime.utcnow()
-        notify('Please wait...', 'The workflow is syncing tasks for the first time')
+        wf.cache_data('last_sync',datetime.utcnow())
+        notify(
+            title='Please wait...',
+            message='The workflow is syncing tasks for the first time'
+        )
 
     user.User.sync(background=background)
     taskfolder.TaskFolder.sync(background=background)
@@ -73,18 +85,19 @@ def sync(background=False):
         task.Task.sync_all_tasks(background=background)
     else:
         task.Task.sync_modified_tasks(background=background)
+    hashtag.Hashtag.sync(background=background)
+    #@TODO move this into a child sync of the relevant tasks once bugfix is completed
 
-    if background:
-        if first_sync:
-            notify('Initial sync has completed', 'All of your tasks are now available for browsing')
+    if first_sync:
+        notify(
+            title='Initial sync has completed',
+            message='All of your tasks are now available for browsing'
+        )
 
-        # If executed manually, this will pass on to the post notification action
-        print('Sync completed successfully')
-    
     log.debug('First sync: ' + str(first_sync))
-    log.debug('Last sync time: ' + str(Preferences.current_prefs().last_sync))
-    Preferences.current_prefs().last_sync = datetime.utcnow()
-    log.debug('This sync time: ' + str(Preferences.current_prefs().last_sync))
+    log.debug('Last sync time: ' + str(wf.cached_data('last_sync',max_age=0)))
+    wf.cache_data('last_sync',datetime.utcnow())
+    log.debug('This sync time: ' + str(wf.cached_data('last_sync')))
     return True
 
 
@@ -95,15 +108,15 @@ def background_sync():
     # Only runs if another sync is not already in progress
     run_in_background(task_id, [
         '/usr/bin/env',
-        'python',
-        workflow().workflowfile('alfred-mstodo-workflow.py'),
+        'python3',
+        wf.workflowfile('alfred_mstodo_workflow.py'),
         'pref sync background',
         '--commit'
     ])
 
 
 def background_sync_if_necessary(seconds=30):
-    last_sync = Preferences.current_prefs().last_sync
+    last_sync = wf.cached_data('last_sync', max_age=0)
 
     # Avoid syncing on every keystroke, background_sync will also prevent
     # multiple concurrent syncs

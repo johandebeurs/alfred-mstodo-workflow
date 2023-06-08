@@ -1,6 +1,6 @@
 from datetime import time, timedelta
 
-from mstodo.util import workflow
+from mstodo.util import wf_wrapper
 
 DEFAULT_TASKFOLDER_MOST_RECENT = 'most_recent'
 
@@ -11,7 +11,6 @@ EXPLICIT_KEYWORDS_KEY = 'explicit_keywords'
 HOIST_SKIPPED_TASKS_KEY = 'hoist_skipped_tasks'
 ICON_THEME_KEY = 'icon_theme'
 LAST_TASKFOLDER_ID_KEY = 'last_taskfolder_id'
-LAST_SYNC_KEY = 'last_sync'
 PRERELEASES_KEY = '__workflow_prereleases'
 REMINDER_TIME_KEY = 'reminder_time'
 REMINDER_TODAY_OFFSET_KEY = 'reminder_today_offset'
@@ -20,12 +19,15 @@ UPCOMING_DURATION_KEY = 'upcoming_duration'
 COMPLETED_DURATION_KEY = 'completed_duration'
 DATE_LOCALE_KEY = 'date_locale'
 
+wf = wf_wrapper()
+
 class Preferences(object):
 
     _current_prefs = None
 
     @classmethod
     def sync(cls):
+        #@TODO check this logic. There is no settings module?
         from mstodo.api import settings
 
         prefs = cls.current_prefs()
@@ -47,7 +49,7 @@ class Preferences(object):
     @classmethod
     def current_prefs(cls):
         if not cls._current_prefs:
-            cls._current_prefs = Preferences(workflow().stored_data('prefs'))
+            cls._current_prefs = Preferences(wf.stored_data('prefs'))
         if not cls._current_prefs:
             cls._current_prefs = Preferences({})
         return cls._current_prefs
@@ -61,7 +63,7 @@ class Preferences(object):
             self.prerelease_channel = self._data['prerelease_channel']
             del self._data['prerelease_channel']
 
-            workflow().store_data('prefs', self._data)
+            wf.store_data('prefs', self._data)
 
     def _set(self, key, value):
         if value is None and key in self._data:
@@ -71,7 +73,7 @@ class Preferences(object):
         else:
             return
 
-        workflow().store_data('prefs', self._data)
+        wf.store_data('prefs', self._data)
 
     def _get(self, key, default=None, type=str):
         value = self._data.get(key)
@@ -129,11 +131,11 @@ class Preferences(object):
 
     @property
     def prerelease_channel(self):
-        return workflow().settings.get(PRERELEASES_KEY, False)
+        return wf.settings.get(PRERELEASES_KEY, False)
 
     @prerelease_channel.setter
     def prerelease_channel(self, prerelease_channel):
-        workflow().settings[PRERELEASES_KEY] = prerelease_channel
+        wf.settings[PRERELEASES_KEY] = prerelease_channel
 
     @property
     def last_taskfolder_id(self):
@@ -142,14 +144,6 @@ class Preferences(object):
     @last_taskfolder_id.setter
     def last_taskfolder_id(self, last_taskfolder_id):
         self._set(LAST_TASKFOLDER_ID_KEY, last_taskfolder_id)
-
-    @property
-    def last_sync(self):
-        return self._get(LAST_SYNC_KEY, None)
-
-    @last_sync.setter
-    def last_sync(self, last_sync):
-        self._set(LAST_SYNC_KEY, last_sync)
 
     @property
     def due_order(self):
@@ -182,7 +176,7 @@ class Preferences(object):
     @upcoming_duration.setter
     def upcoming_duration(self, upcoming_duration):
         self._set(UPCOMING_DURATION_KEY, upcoming_duration)
-    
+  
     @property
     def completed_duration(self):
         return self._get(COMPLETED_DURATION_KEY, 1)

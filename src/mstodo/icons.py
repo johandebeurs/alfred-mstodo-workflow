@@ -1,12 +1,11 @@
 from mstodo.models.preferences import Preferences
-from mstodo.util import workflow
+from mstodo.util import wf_wrapper
 
 _icon_theme = None
 
-
 def alfred_is_dark():
     # Formatted rgba(255,255,255,0.90)
-    background_rgba = workflow().alfred_env['theme_background']
+    background_rgba = wf_wrapper().alfred_env['theme_background']
     if background_rgba:
         rgb = [int(x) for x in background_rgba[5:-6].split(',')]
         return (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255 < 0.5
@@ -25,7 +24,7 @@ def icon_theme():
 
     return _icon_theme
 
-_icon_path = 'icons/%s/' % icon_theme()
+_icon_path = f"icons/{icon_theme()}/"
 
 ACCOUNT = _icon_path + 'account.png'
 BACK = _icon_path + 'back.png'

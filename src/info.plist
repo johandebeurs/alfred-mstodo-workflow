@@ -195,7 +195,7 @@
 				<integer>102</integer>
 				<key>script</key>
 				<string>export LC_CTYPE="$(defaults read -g AppleLocale).UTF-8"
-/usr/bin/env python -O alfred-mstodo-workflow.py "{query}" --commit --alt</string>
+/usr/bin/env python3 -O alfred_mstodo_workflow.py "{query}" --commit --alt</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -219,7 +219,7 @@
 				<integer>102</integer>
 				<key>script</key>
 				<string>export LC_CTYPE="$(defaults read -g AppleLocale).UTF-8"
-/usr/bin/env python -O alfred-mstodo-workflow.py "{query}" --commit</string>
+/usr/bin/env python3 -O alfred_mstodo_workflow.py "{query}" --commit</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -312,7 +312,7 @@
 				<key>script</key>
 				<string>export LC_CTYPE="$(defaults read -g AppleLocale).UTF-8"
 echo "{query}" &gt; .query
-/usr/bin/env python -O alfred-mstodo-workflow.py "{query}"</string>
+/usr/bin/env python3 -O alfred_mstodo_workflow.py "{query}"</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -342,7 +342,7 @@ echo "{query}" &gt; .query
 				<integer>102</integer>
 				<key>script</key>
 				<string>export LC_CTYPE="$(defaults read -g AppleLocale).UTF-8"
-/usr/bin/env python -O alfred-mstodo-workflow.py "{query}" --commit --cmd</string>
+/usr/bin/env python3 -O alfred_mstodo_workflow.py "{query}" --commit --cmd</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -366,7 +366,7 @@ echo "{query}" &gt; .query
 				<integer>102</integer>
 				<key>script</key>
 				<string>export LC_CTYPE="$(defaults read -g AppleLocale).UTF-8"
-/usr/bin/env python -O alfred-mstodo-workflow.py "{query}" --commit --ctrl</string>
+/usr/bin/env python3 -O alfred_mstodo_workflow.py "{query}" --commit --ctrl</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -391,7 +391,9 @@ echo "{query}" &gt; .query
 				<key>script</key>
 				<string>version=${alfred_version:0:1}
 cd ~/Library/Application\ Support/Alfred\ $version/Workflow\ Data/com.johandebeurs.alfred.mstodo/ &amp;&amp; rm -f lists.* .lists.* *.lock mstodo.*
-rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred-$version/Workflow\ Data/com.johandebeurs.alfred.mstodo/</string>
+rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred-$version/Workflow\ Data/com.johandebeurs.alfred.mstodo/
+cd ~/Library/Application\ Support/Alfred/Workflow\ Data/com.johandebeurs.alfred.mstodo/ &amp;&amp; rm -f lists.* .lists.* *.lock mstodo.*
+rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred/Workflow\ Data/com.johandebeurs.alfred.mstodo/</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -435,7 +437,7 @@ rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred-$version/Workflow\ Data/co
 				<key>spaces</key>
 				<string></string>
 				<key>url</key>
-				<string>https://github.com/johandebeurs/alfred-mstodo-workflow/issues</string>
+				<string>https://github.com/__githubslug__/issues</string>
 				<key>utf8</key>
 				<true/>
 			</dict>
@@ -478,8 +480,9 @@ rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred-$version/Workflow\ Data/co
 				<string>version=${alfred_version:0:1}
 rm -rf ~/Library/Application\ Support/Alfred\ $version/Workflow\ Data/com.johandebeurs.alfred.mstodo/
 rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred-$version/Workflow\ Data/com.johandebeurs.alfred.mstodo/
-security delete-generic-password -s com.johandebeurs.alfred.mstodo -a oauth_token
-security delete-generic-password -s com.johandebeurs.alfred.mstodo -a refresh_token</string>
+rm -rf ~/Library/Application\ Support/Alfred/Workflow\ Data/com.johandebeurs.alfred.mstodo/
+rm -rf ~/Library/Caches/com.runningwithcrayons.Alfred/Workflow\ Data/com.johandebeurs.alfred.mstodo/
+security delete-generic-password -s com.johandebeurs.alfred.mstodo -a msal</string>
 				<key>scriptargtype</key>
 				<integer>0</integer>
 				<key>scriptfile</key>
@@ -517,17 +520,7 @@ security delete-generic-password -s com.johandebeurs.alfred.mstodo -a refresh_to
 		</dict>
 	</array>
 	<key>readme</key>
-	<string>New in version 0.1.3:
-  * Resolve issue setting default task folder
-
-More details:
-https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.3
-
-
-The 0.1 release is a first port of https://github.com/idpaterson/alfred-mstodo-workflow/ to the Wunderlist replacement, Microsoft ToDo
-
-More details:
-https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.3</string>
+	<string>__changelog__</string>
 	<key>uidata</key>
 	<dict>
 		<key>06482847-7F21-4C57-88BB-B642E0182781</key>
@@ -623,8 +616,8 @@ https://github.com/johandebeurs/alfred-mstodo-workflow/releases/tag/0.1.3</strin
 		</dict>
 	</dict>
 	<key>version</key>
-	<string>0.1.2</string>
+	<string>__version__</string>
 	<key>webaddress</key>
-	<string>https://github.com/johandebeurs/alfred-mstodo-workflow</string>
+	<string>https://github.com/__githubslug__</string>
 </dict>
 </plist>

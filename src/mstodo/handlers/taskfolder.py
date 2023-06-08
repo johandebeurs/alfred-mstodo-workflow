@@ -1,16 +1,23 @@
-from mstodo import icons, util
+import logging
+from workflow.notify import notify
+from requests import codes
+from mstodo import icons
+from mstodo.util import wf_wrapper
 
+log = logging.getLogger(__name__)
 
 def _taskfolder_name(args):
     return ' '.join(args[1:]).strip()
 
 def filter(args):
+    wf = wf_wrapper()
     taskfolder_name = _taskfolder_name(args)
     subtitle = taskfolder_name if taskfolder_name else 'Type the name of the task folder'
 
-    util.workflow().add_item('New folder...', subtitle, arg='--stored-query', valid=taskfolder_name != '', icon=icons.LIST_NEW)
+    wf.add_item('New folder...', subtitle, arg='--stored-query',
+                             valid=taskfolder_name != '', icon=icons.LIST_NEW)
 
-    util.workflow().add_item(
+    wf.add_item(
         'Main menu',
         autocomplete='', icon=icons.BACK
     )
@@ -21,11 +28,14 @@ def commit(args, modifier=None):
 
     taskfolder_name = _taskfolder_name(args)
 
-    req = taskfolders.create_taskFolder(taskfolder_name)
-    if req.status_code == 201:
-        print('The new task folder was created')
+    req = taskfolders.create_taskfolder(taskfolder_name)
+    if req.status_code == codes.created:
+        notify(
+            title='Taskfolder updated',
+            message=f"The folder {taskfolder_name} was created"
+        )
         background_sync()
     elif req.status_code > 400:
-        print(str(req.json()['error']['message']))
+        log.debug(str(req.json()['error']['message']))
     else:
-        print('Unknown API error. Please try again')
+        log.debug('Unknown API error. Please try again')

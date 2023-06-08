@@ -31,7 +31,8 @@ def get(path, params=None):
     return requests.get(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,
-        params=params
+        params=params,
+        timeout=config.REQUEST_TIMEOUT
     )
 
 @_report_errors
@@ -41,7 +42,8 @@ def post(path, data=None):
     return requests.post(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,
-        data=json.dumps(data)
+        data=json.dumps(data),
+        timeout=config.REQUEST_TIMEOUT
     )
 
 @_report_errors
@@ -51,7 +53,8 @@ def put(path, data=None):
     return requests.put(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,
-        data=json.dumps(data)
+        data=json.dumps(data),
+        timeout=config.REQUEST_TIMEOUT
     )
 
 @_report_errors
@@ -61,7 +64,8 @@ def patch(path, data=None):
     return requests.patch(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,
-        data=json.dumps(data)
+        data=json.dumps(data),
+        timeout=config.REQUEST_TIMEOUT
     )
 
 @_report_errors
@@ -70,5 +74,6 @@ def delete(path, data=None):
     return requests.delete(
         config.MS_TODO_API_BASE_URL + '/' + path,
         headers=headers,
-        params=data
+        params=data,
+        timeout=config.REQUEST_TIMEOUT
     )

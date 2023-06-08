@@ -1,14 +1,15 @@
 # encoding: utf-8
+from peewee import OperationalError
 
 from workflow import MATCH_ALL, MATCH_ALLCHARS
-
-from peewee import OperationalError
+from workflow.notify import notify
 
 from mstodo import icons
 from mstodo.models.preferences import Preferences, DEFAULT_TASKFOLDER_MOST_RECENT
 from mstodo.models.user import User
-from mstodo.util import format_time, parsedatetime_calendar, relaunch_alfred, user_locale, workflow
+from mstodo.util import format_time, parsedatetime_calendar, relaunch_alfred, user_locale, wf_wrapper
 
+wf = wf_wrapper()
 
 def _parse_time(phrase):
     from datetime import date, time
@@ -20,20 +21,20 @@ def _parse_time(phrase):
     datetime_info = cal.parse(phrase, sourceTime=date.today().timetuple())
 
     # Ensure that only a time was provided and not a date
-    if datetime_info[1] == 2:
+    if datetime_info[1].hasTime:
         return time(*datetime_info[0][3:5])
     return None
 
-def _format_time_offset(t):
-    if t is None:
+def _format_time_offset(dt):
+    if dt is None:
         return 'disabled'
 
     offset = []
 
-    if t.hour > 0:
-        offset.append('%sh' % t.hour)
-    if t.minute > 0:
-        offset.append('%sm' % t.minute)
+    if dt.hour > 0:
+        offset.append(f"{dt.hour}h")
+    if dt.minute > 0:
+        offset.append(f"{dt.minute}m")
 
     return ' '.join(offset)
 
@@ -44,19 +45,19 @@ def filter(args):
         reminder_time = _parse_time(' '.join(args))
 
         if reminder_time is not None:
-            workflow().add_item(
+            wf.add_item(
                 'Change default reminder time',
-                u'⏰ %s' % format_time(reminder_time, 'short'),
+                f"⏰ {format_time(reminder_time, 'short')}",
                 arg=' '.join(args), valid=True, icon=icons.REMINDER
             )
         else:
-            workflow().add_item(
+            wf.add_item(
                 'Type a new reminder time',
                 'Date offsets like the morning before the due date are not supported yet',
                 valid=False, icon=icons.REMINDER
             )
 
-        workflow().add_item(
+        wf.add_item(
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
@@ -64,52 +65,52 @@ def filter(args):
         reminder_today_offset = _parse_time(' '.join(args))
 
         if reminder_today_offset is not None:
-            workflow().add_item(
+            wf.add_item(
                 'Set a custom reminder offset',
-                u'⏰ now + %s' % _format_time_offset(reminder_today_offset),
+                f"⏰ now + {_format_time_offset(reminder_today_offset)}",
                 arg=' '.join(args), valid=True, icon=icons.REMINDER
             )
         else:
-            workflow().add_item(
+            wf.add_item(
                 'Type a custom reminder offset',
                 'Use the formats hh:mm or 2h 5m',
                 valid=False, icon=icons.REMINDER
             )
 
-        workflow().add_item(
+        wf.add_item(
             '30 minutes',
             arg='-pref reminder_today 30m', valid=True, icon=icons.REMINDER
         )
 
-        workflow().add_item(
+        wf.add_item(
             '1 hour',
             '(default)',
             arg='-pref reminder_today 1h', valid=True, icon=icons.REMINDER
         )
 
-        workflow().add_item(
+        wf.add_item(
             '90 minutes',
             arg='-pref reminder_today 90m', valid=True, icon=icons.REMINDER
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Always use the default reminder time',
             'Avoids adjusting the reminder based on the current date',
             arg='-pref reminder_today disabled', valid=True, icon=icons.CANCEL
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
     elif 'default_folder' in args:
-        taskfolders = workflow().stored_data('taskfolders')
+        taskfolders = wf.stored_data('taskfolders')
         matching_taskfolders = taskfolders
 
         if len(args) > 2:
             taskfolder_query = ' '.join(args[2:])
             if taskfolder_query:
-                matching_taskfolders = workflow().filter(
+                matching_taskfolders = wf.filter(
                     taskfolder_query,
                     taskfolders,
                     lambda f: f['title'],
@@ -119,26 +120,26 @@ def filter(args):
 
         for i, f in enumerate(matching_taskfolders):
             if i == 1:
-                workflow().add_item(
+                wf.add_item(
                     'Most recently used folder',
                     'Default to the last folder to which a task was added',
-                    arg='-pref default_folder %s' % DEFAULT_TASKFOLDER_MOST_RECENT,
+                    arg=f"-pref default_folder {DEFAULT_TASKFOLDER_MOST_RECENT}",
                     valid=True, icon=icons.RECURRENCE
                 )
             icon = icons.INBOX if f['isDefaultFolder'] else icons.LIST
-            workflow().add_item(
+            wf.add_item(
                 f['title'],
-                arg='-pref default_folder %s' % f['id'],
+                arg=f"-pref default_folder {f['id']}",
                 valid=True, icon=icon
             )
 
-        workflow().add_item(
+        wf.add_item(
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
     else:
         current_user = None
-        taskfolders = workflow().stored_data('taskfolders')
+        taskfolders = wf.stored_data('taskfolders')
         loc = user_locale()
         default_folder_name = 'Tasks'
 
@@ -154,71 +155,81 @@ def filter(args):
             default_folder_name = 'Most recent folder'
         else:
             default_taskfolder_id = prefs.default_taskfolder_id
-            default_folder_name = next((f['title'] for f in taskfolders if f['id'] == default_taskfolder_id), 'Tasks')
+            default_folder_name = next(
+                (f['title'] for f in taskfolders if f['id'] == default_taskfolder_id),
+                'Tasks'
+            )
 
-        if current_user and current_user.name:
-            workflow().add_item(
+        if current_user and current_user.userPrincipalName:
+            #@TODO double check this handling if the user schema changes on move to new APIs
+            wf.add_item(
                 'Sign out',
-                'You are logged in as ' + current_user.name,
+                f"You are logged in as {current_user.userPrincipalName}",
                 autocomplete='-logout', icon=icons.CANCEL
             )
 
-        workflow().add_item(
+        wf.add_item(
             'Show completed tasks',
             'Includes completed tasks in search results',
-            arg='-pref show_completed_tasks', valid=True, icon=icons.TASK_COMPLETED if prefs.show_completed_tasks else icons.TASK
+            arg='-pref show_completed_tasks', valid=True,
+            icon=icons.TASK_COMPLETED if prefs.show_completed_tasks else icons.TASK
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Default reminder time',
-            u'⏰ %s    Reminders without a specific time will be set to this time' % format_time(prefs.reminder_time, 'short'),
+            f"⏰ {format_time(prefs.reminder_time, 'short')}      Reminders without a specific time will be set to this time",
             autocomplete='-pref reminder ', icon=icons.REMINDER
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Default reminder when due today',
-            u'⏰ %s    Default reminder time for tasks due today is %s' % (_format_time_offset(prefs.reminder_today_offset), 'relative to the current time' if prefs.reminder_today_offset else 'always %s' % format_time(prefs.reminder_time, 'short')),
+            f"⏰ {_format_time_offset(prefs.reminder_today_offset)}      Default reminder time for tasks due today is \
+{'relative to the current time' if prefs.reminder_today_offset else 'always %s' % format_time(prefs.reminder_time, 'short')}",
             autocomplete='-pref reminder_today ', icon=icons.REMINDER
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Default folder',
-            u'%s    Change the default folder when creating new tasks' % default_folder_name,
+            f"{default_folder_name}      Change the default folder when creating new tasks",
             autocomplete='-pref default_folder ', icon=icons.LIST
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Automatically set a reminder on the due date',
-            u'Sets a default reminder for tasks with a due date.',
-            arg='-pref automatic_reminders', valid=True, icon=icons.TASK_COMPLETED if prefs.automatic_reminders else icons.TASK
+            'Sets a default reminder for tasks with a due date.',
+            arg='-pref automatic_reminders', valid=True,
+            icon=icons.TASK_COMPLETED if prefs.automatic_reminders else icons.TASK
         )
 
         if loc != 'en_US' or prefs.date_locale:
-            workflow().add_item(
+            wf.add_item(
                 'Force US English for dates',
-                'Rather than the current locale (%s)' % loc,
-                arg='-pref force_en_US', valid=True, icon=icons.TASK_COMPLETED if prefs.date_locale == 'en_US' else icons.TASK
+                f"Rather than the current locale ({loc})",
+                arg='-pref force_en_US', valid=True,
+                icon=icons.TASK_COMPLETED if prefs.date_locale == 'en_US' else icons.TASK
             )
 
-        workflow().add_item(
+        wf.add_item(
             'Require explicit due keyword',
             'Requires the due keyword to avoid accidental due date extraction',
-            arg='-pref explicit_keywords', valid=True, icon=icons.TASK_COMPLETED if prefs.explicit_keywords else icons.TASK
+            arg='-pref explicit_keywords', valid=True,
+            icon=icons.TASK_COMPLETED if prefs.explicit_keywords else icons.TASK
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Check for experimental updates to this workflow',
             'The workflow automatically checks for updates; enable this to include pre-releases',
-            arg=':pref prerelease_channel', valid=True, icon=icons.TASK_COMPLETED if prefs.prerelease_channel else icons.TASK
+            arg=':pref prerelease_channel', valid=True,
+            icon=icons.TASK_COMPLETED if prefs.prerelease_channel else icons.TASK
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Force sync',
             'The workflow syncs automatically, but feel free to be forcible.',
             arg='-pref sync', valid=True, icon=icons.SYNC
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Switch theme',
             'Toggle between light and dark icons',
             arg='-pref retheme',
@@ -226,7 +237,7 @@ def filter(args):
             icon=icons.PAINTBRUSH
         )
 
-        workflow().add_item(
+        wf.add_item(
             'Main menu',
             autocomplete='', icon=icons.BACK
         )
@@ -234,88 +245,119 @@ def filter(args):
 def commit(args, modifier=None):
     prefs = Preferences.current_prefs()
     relaunch_command = '-pref'
-
     if '--alfred' in args:
         relaunch_command = ' '.join(args[args.index('--alfred') + 1:])
-
     if 'sync' in args:
         from mstodo.sync import sync
-        sync('background' in args)
-
+        sync(background=('background' in args))
         relaunch_command = None
     elif 'show_completed_tasks' in args:
         prefs.show_completed_tasks = not prefs.show_completed_tasks
 
         if prefs.show_completed_tasks:
-            print('Completed tasks are now visible in the workflow')
+            notify(
+                title='Preferences changed',
+                message='Completed tasks are now visible in the workflow'
+            )
         else:
-            print('Completed tasks will not be visible in the workflow')
+            notify(
+                title='Preferences changed',
+                message='Completed tasks will not be visible in the workflow'
+            )
     elif 'default_folder' in args:
         default_taskfolder_id = None
-        taskfolders = workflow().stored_data('taskfolders')
-
+        taskfolders = wf.stored_data('taskfolders')
         if len(args) > 2:
             default_taskfolder_id = args[2]
-
         prefs.default_taskfolder_id = default_taskfolder_id
-
         if default_taskfolder_id:
-            default_folder_name = next((f['title'] for f in taskfolders if f['id'] == default_taskfolder_id), 'most recent')
-            print('Tasks will be added to your %s folder by default' % default_folder_name)
+            default_folder_name = next(
+                (f['title'] for f in taskfolders if f['id'] == default_taskfolder_id),
+                'most recent'
+            )
+            notify(
+                title='Preferences changed',
+                message=f"Tasks will be added to your {default_folder_name} folder by default"
+            )
         else:
-            print('Tasks will be added to the Tasks folder by default')
+            notify(
+                title='Preferences changed',
+                message='Tasks will be added to the Tasks folder by default'
+            )
     elif 'explicit_keywords' in args:
         prefs.explicit_keywords = not prefs.explicit_keywords
-
         if prefs.explicit_keywords:
-            print('Remember to use the "due" keyword')
+            notify(
+                title='Preferences changed',
+                message='Remember to use the "due" keyword'
+            )
         else:
-            print('Implicit due dates enabled (e.g. "Recycling tomorrow")')
+            notify(
+                title='Preferences changed',
+                message='Implicit due dates enabled (e.g. "Recycling tomorrow")'
+            )
     elif 'reminder' in args:
         reminder_time = _parse_time(' '.join(args))
-
         if reminder_time is not None:
             prefs.reminder_time = reminder_time
-
-            print('Reminders will now default to %s' % format_time(reminder_time, 'short'))
+            notify(
+                title='Preferences changed',
+                message=f"Reminders will now default to {format_time(reminder_time, 'short')}"
+            )
     elif 'reminder_today' in args:
         reminder_today_offset = None
-
         if not 'disabled' in args:
             reminder_today_offset = _parse_time(' '.join(args))
-
         prefs.reminder_today_offset = reminder_today_offset
-
-        print('The offset for current-day reminders is now %s' % _format_time_offset(reminder_today_offset))
+        notify(
+                title='Preferences changed',
+                message=f"The offset for current-day reminders is now {_format_time_offset(reminder_today_offset)}"
+            )
     elif 'automatic_reminders' in args:
         prefs.automatic_reminders = not prefs.automatic_reminders
-
         if prefs.automatic_reminders:
-            print('A reminder will automatically be set for due tasks')
+            notify(
+                title='Preferences changed',
+                message='A reminder will automatically be set for due tasks'
+            )
         else:
-            print('A reminder will not be added automatically')
+            notify(
+                title='Preferences changed',
+                message='A reminder will not be added automatically'
+            )
     elif 'retheme' in args:
         prefs.icon_theme = 'light' if icons.icon_theme() == 'dark' else 'dark'
-
-        print('The workflow is now using the %s icon theme' % (prefs.icon_theme))
+        notify(
+                title='Preferences changed',
+                message=f"The workflow is now using the {prefs.icon_theme} icon theme"
+            )
     elif 'prerelease_channel' in args:
-
         prefs.prerelease_channel = not prefs.prerelease_channel
-
         # Update the workflow settings and reverify the update data
-        workflow().check_update(True)
-
+        wf.check_update(True)
         if prefs.prerelease_channel:
-            print('The workflow will prompt you to update to experimental pre-releases')
+            notify(
+                title='Preferences changed',
+                message='The workflow will prompt you to update to experimental pre-releases'
+            )
         else:
-            print('The workflow will only prompt you to update to final releases')
+            notify(
+                title='Preferences changed',
+                message='The workflow will only prompt you to update to final releases'
+            )
     elif 'force_en_US' in args:
         if prefs.date_locale:
             prefs.date_locale = None
-            print('The workflow will expect your local language and date format')
+            notify(
+                title='Preferences changed',
+                message='The workflow will expect your local language and date format'
+            )
         else:
             prefs.date_locale = 'en_US'
-            print('The workflow will expect dates in US English')
+            notify(
+                title='Preferences changed',
+                message='The workflow will expect dates in US English'
+            )
 
     if relaunch_command:
-        relaunch_alfred('td%s' % relaunch_command)
+        relaunch_alfred(f"td{relaunch_command}")

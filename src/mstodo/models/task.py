@@ -4,9 +4,8 @@ from datetime import date, timedelta, datetime
 import logging
 import time
 
-from peewee import (BooleanField, CharField, DateField, ForeignKeyField,
-                    IntegerField, PeeweeException, PrimaryKeyField, TextField,
-                    JOIN)
+from peewee import (BooleanField, CharField, ForeignKeyField, IntegerField, 
+                    PeeweeException, TextField, JOIN)
 
 from mstodo.models.fields import DateTimeUTCField
 from mstodo.models.base import BaseModel
@@ -24,11 +23,11 @@ _days_by_recurrence_type = {
     'year': 365
 }
 
-_star = u'★'
-_overdue_1x = u'⚠️'
-_overdue_2x = u'❗️'
-_recurrence = u'↻'
-_reminder = u'⏰'
+_star = '★'
+_overdue_1x = '⚠️'
+_overdue_2x = '❗️'
+_recurrence = '↻'
+_reminder = '⏰'
 
 _primary_api_fields = [
     'id',
@@ -75,13 +74,13 @@ class Task(BaseModel):
     body_contentType = TextField(null=True)
     body_content = TextField(null=True)
     recurrence_type = CharField(null=True)
-    recurrence_count = IntegerField(null=True) 
+    recurrence_count = IntegerField(null=True)
     # "categories": [],
 
     @staticmethod
     def transform_datamodel(tasks_data):
         for task in tasks_data:
-            for (k,v) in task.copy().iteritems():
+            for (k, v) in task.copy().items():
                 # log.debug(k + ": " + str(v))
                 if k == "subject":
                     task['title'] = v
@@ -95,22 +94,21 @@ class Task(BaseModel):
                         task['body_contentType'] = v['contentType']
                         task['body_content'] = v['content']
                     elif k == 'recurrence':
-                        # WL uses day, week month year, MSTODO uses daily weekly absoluteMonthly relativeMonthly a..Yearly r...Yearly
+                        # WL uses day, week month year, MSTODO uses
+                        # daily weekly absoluteMonthly relativeMonthly a..Yearly r...Yearly
                         if 'week' in v['pattern']['type'].lower(): window = 'week'
                         elif 'month' in v['pattern']['type'].lower(): window = 'month'
                         elif 'year' in v['pattern']['type'].lower(): window = 'year'
                         elif 'da' in v['pattern']['type'].lower(): window = 'day'
                         else: window = ''
-                        task['recurrence_type'] = window 
+                        task['recurrence_type'] = window
                         task['recurrence_count'] = v['pattern']['interval']
         return tasks_data
-    
+
     @classmethod
     def sync_all_tasks(cls, background=False):
         from mstodo.api import tasks
         from concurrent import futures
-        from mstodo.models.preferences import Preferences
-        from mstodo.models.hashtag import Hashtag
         start = time.time()
         instances = []
         tasks_data = []
@@ -122,24 +120,24 @@ class Task(BaseModel):
             job = executor.submit(lambda p: tasks.tasks(**p),kwargs)
             tasks_data = job.result()
 
-        log.info('Retrieved all %d task ids in %s', len(tasks_data), time.time() - start)
+        log.debug("Retrieved all {} task ids in {} seconds".format(len(tasks_data), round(time.time() - start, 3)))
         start = time.time()
 
         try:
             # Pull instances from DB if they exist
-            instances = cls.select(cls.id, cls.title, cls.changeKey) 
+            instances = cls.select(cls.id, cls.title, cls.changeKey)
         except PeeweeException:
             pass
 
-        log.info('Loaded all %d tasks from the database in %s', len(instances), time.time() - start)
+        log.debug("Retrieved all {} tasks from database in {} seconds"\
+                 .format(len(instances), round(time.time() - start, 3)))
         start = time.time()
 
         tasks_data = cls.transform_datamodel(tasks_data)
         cls._perform_updates(instances, tasks_data)
+        cls._sync_children()
 
-        Hashtag.sync(background=background)
-
-        log.info('Completed updates to tasks in %s', time.time() - start)
+        log.debug("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
 
         return None
 
@@ -147,14 +145,15 @@ class Task(BaseModel):
     def sync_modified_tasks(cls, background=False):
         from mstodo.api import tasks
         from concurrent import futures
-        from mstodo.models.preferences import Preferences
-        from mstodo.models.hashtag import Hashtag
+        from workflow import Workflow
+        wf = Workflow()
         start = time.time()
         instances = []
         all_tasks = []
 
         # Remove 60 seconds to make sure all recent tasks are included
-        dt = Preferences.current_prefs().last_sync - timedelta(seconds=60)
+        # dt = Preferences.current_prefs().last_sync - timedelta(seconds=60)
+        dt = wf.cached_data('last_sync', max_age=0) - timedelta(seconds=60)
 
         # run a single future for all tasks modified since last run
         with futures.ThreadPoolExecutor() as executor:
@@ -164,12 +163,14 @@ class Task(BaseModel):
         # run a separate futures map over all taskfolders @TODO change this to be per taskfolder
         with futures.ThreadPoolExecutor(max_workers=4) as executor:
             jobs = (
-                executor.submit(lambda p: tasks.tasks(**p), {'fields': _primary_api_fields, 'completed':True}),
-                executor.submit(lambda p: tasks.tasks(**p), {'fields': _primary_api_fields, 'completed':False})
+                executor.submit(lambda p: tasks.tasks(**p),
+                                {'fields': _primary_api_fields, 'completed':True}),
+                executor.submit(lambda p: tasks.tasks(**p),
+                                {'fields': _primary_api_fields, 'completed':False})
             )
             for job in futures.as_completed(jobs):
                 all_tasks += job.result()
-                log.debug(job.result())
+                # log.debug(job.result())
 
         # if task in modified_tasks then remove from all taskfolder data
         modified_tasks_ids = [task['id'] for task in modified_tasks]
@@ -178,7 +179,8 @@ class Task(BaseModel):
                 all_tasks.remove(task)
         all_tasks.extend(modified_tasks)
 
-        log.info('Retrieved all %d tasks including %d modifications since %s in %s', len(all_tasks), len(modified_tasks), dt, time.time() - start)
+        log.debug("Retrieved all {} including {} modifications since {} in {} seconds" \
+                 .format(len(all_tasks), len(modified_tasks), dt, round(time.time() - start, 3)))
         start = time.time()
 
         try:
@@ -187,15 +189,15 @@ class Task(BaseModel):
         except PeeweeException:
             pass
 
-        log.info('Loaded all %d tasks from the database in %s', len(instances), time.time() - start)
+        log.debug("Loaded all {} from database in {} seconds".format(len(instances), round(time.time() - start, 3)))
         start = time.time()
 
         all_tasks = cls.transform_datamodel(all_tasks)
         cls._perform_updates(instances, all_tasks)
+        # cls._sync_children()
+        #FIXME this causes errors, need to refactor
 
-        Hashtag.sync(background=background)
-
-        log.info('Completed updates to tasks in %s', time.time() - start)
+        log.debug("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
 
         return None
 
@@ -247,26 +249,26 @@ class Task(BaseModel):
 
         # Task is completed
         if self.status == 'completed':
-            subtitle.append('Completed %s' % short_relative_formatted_date(self.completedDateTime))
+            subtitle.append(f"Completed {short_relative_formatted_date(self.completedDateTime)}")
         # Task is not yet completed
         elif self.dueDateTime:
-            subtitle.append('Due %s' % short_relative_formatted_date(self.dueDateTime))
+            subtitle.append(f"Due {short_relative_formatted_date(self.dueDateTime)}")
 
         if self.recurrence_type:
             if self.recurrence_count > 1:
-                subtitle.append('%s Every %d %ss' % (_recurrence, self.recurrence_count, self.recurrence_type))
+                subtitle.append(f"{_recurrence} Every {self.recurrence_count} {self.recurrence_type}s")
             # Cannot simply add -ly suffix
             elif self.recurrence_type == 'day':
-                subtitle.append('%s Daily' % (_recurrence))
+                subtitle.append(f"{_recurrence} Daily")
             else:
-                subtitle.append('%s %sly' % (_recurrence, self.recurrence_type.title()))
+                subtitle.append(f"{_recurrence} {self.recurrence_type.title()}ly")
 
-        if not self.status == 'completed':
+        if self.status != 'completed':
             overdue_times = self.overdue_times
             if overdue_times > 1:
-                subtitle.insert(0, u'%s %dX OVERDUE!' % (_overdue_2x, overdue_times))
+                subtitle.insert(0, f"{_overdue_2x} {overdue_times}X OVERDUE!")
             elif overdue_times == 1:
-                subtitle.insert(0, u'%s OVERDUE!' % (_overdue_1x))
+                subtitle.insert(0, f"{_overdue_1x} OVERDUE!")
 
             if self.reminderDateTime:
                 reminder_date_phrase = None
@@ -276,10 +278,8 @@ class Task(BaseModel):
                 else:
                     reminder_date_phrase = short_relative_formatted_date(self.reminderDateTime)
 
-                subtitle.append('%s %s at %s' % (
-                    _reminder,
-                    reminder_date_phrase,
-                    format_time(self.reminderDateTime, 'short')))
+                subtitle.append(f"{_reminder} {reminder_date_phrase} at \
+{format_time(self.reminderDateTime, 'short')}")
 
         subtitle.append(self.title)
 
@@ -291,9 +291,9 @@ class Task(BaseModel):
         Hashtag.sync(background=True)
 
     def __str__(self):
-        title = self.title if len(self.title) <= 20 else self.title[:20].rstrip() + u'…'
+        title = self.title if len(self.title) <= 20 else self.title[:20].rstrip() + '…'
         task_subid = self.id[-32:]
-        return u'<%s ...%s %s>' % (type(self).__name__, task_subid, title)
+        return f"<{type(self).__name__} ...{task_subid} {title}>"
 
     class Meta(object):
         order_by = ('lastModifiedDateTime', 'id')

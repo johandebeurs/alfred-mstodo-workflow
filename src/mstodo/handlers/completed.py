@@ -1,16 +1,15 @@
 # encoding: utf-8
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 from peewee import JOIN, OperationalError
-from workflow.background import is_running
 
 from mstodo import icons
 from mstodo.models.preferences import Preferences
 from mstodo.models.task import Task
 from mstodo.models.taskfolder import TaskFolder
-from mstodo.sync import background_sync, background_sync_if_necessary, sync
-from mstodo.util import relaunch_alfred, workflow
+from mstodo.sync import background_sync, background_sync_if_necessary
+from mstodo.util import relaunch_alfred, wf_wrapper
 
 _hashtag_prompt_pattern = r'#\S*$'
 
@@ -44,7 +43,7 @@ _durations = [
 
 
 def _default_label(days):
-    return 'In the past %d day%s' % (days, '' if days == 1 else 's')
+    return f"In the past {days} day{'' if days == 1 else 's'}"
 
 
 def _duration_info(days):
@@ -62,7 +61,7 @@ def _duration_info(days):
 
 
 def filter(args):
-    wf = workflow()
+    wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     command = args[1] if len(args) > 1 else None
     duration_info = _duration_info(prefs.completed_duration)
@@ -80,22 +79,24 @@ def filter(args):
         duration_info = _duration_info(selected_duration)
 
         if 'custom' in duration_info:
-            wf.add_item(duration_info['label'], duration_info['subtitle'], arg='-completed duration %d' % (duration_info['days']), valid=True, icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO)
+            wf.add_item(duration_info['label'], duration_info['subtitle'],
+                        arg=f"-completed duration {duration_info['days']}", valid=True,
+                        icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO)
 
         for duration_info in _durations:
-            wf.add_item(duration_info['label'], duration_info['subtitle'], arg='-completed duration %d' % (duration_info['days']), valid=True, icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO)
+            wf.add_item(duration_info['label'], duration_info['subtitle'],
+                        arg=f"-completed duration {duration_info['days']}", valid=True,
+                        icon=icons.RADIO_SELECTED if duration_info['days'] == selected_duration else icons.RADIO)
 
         wf.add_item('Back', autocomplete='-completed ', icon=icons.BACK)
 
         return
 
     # Force a sync if not done recently or join if already running
-    if not prefs.last_sync or \
-       datetime.utcnow() - prefs.last_sync > timedelta(seconds=30) or \
-       is_running('sync'):
-        sync()
+    background_sync_if_necessary()
 
-    wf.add_item(duration_info['label'], subtitle='Change the duration for completed tasks', autocomplete='-completed duration ', icon=icons.YESTERDAY)
+    wf.add_item(duration_info['label'], subtitle='Change the duration for completed tasks',
+                autocomplete='-completed duration ', icon=icons.YESTERDAY)
 
     conditions = True
 
@@ -108,22 +109,20 @@ def filter(args):
         conditions = True
 
     tasks = Task.select().join(TaskFolder).where(
-        (Task.completedDateTime > date.today() - timedelta(days=duration_info['days'])) & 
+        (Task.completedDateTime > date.today() - timedelta(days=duration_info['days'])) &
         Task.list.is_null(False) &
         conditions
     )\
         .order_by(Task.completedDateTime.desc(), Task.reminderDateTime.asc(), Task.changeKey.asc())
 
     try:
-        for t in tasks:
-            wf.add_item(u'%s – %s' % (t.list_title, t.title), t.subtitle(), autocomplete='-task %s ' % t.id, icon=icons.TASK_COMPLETED if t.status == 'completed' else icons.TASK)
+        for task in tasks:
+            wf.add_item(f"{task.list_title} – {task.title}", task.subtitle(), autocomplete=f"-task {task.id}",
+                        icon=icons.TASK_COMPLETED if task.status == 'completed' else icons.TASK)
     except OperationalError:
         background_sync()
 
     wf.add_item('Main menu', autocomplete='', icon=icons.BACK)
-
-    # Make sure tasks stay up-to-date
-    background_sync_if_necessary(seconds=2)
 
 def commit(args, modifier=None):
     relaunch_command = None
