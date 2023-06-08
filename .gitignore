@@ -13,4 +13,5 @@ mstodo-*.alfredworkflow
 workflow.log
 workflow.log*
 pylint.json
+src/workflow
 
