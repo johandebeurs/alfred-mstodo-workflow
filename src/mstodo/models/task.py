@@ -279,7 +279,7 @@ class Task(BaseModel):
                     reminder_date_phrase = short_relative_formatted_date(self.reminderDateTime)
 
                 subtitle.append(f"{_reminder} {reminder_date_phrase} at \
-                                {format_time(self.reminderDateTime, 'short')}")
+{format_time(self.reminderDateTime, 'short')}")
 
         subtitle.append(self.title)
 

@@ -45,7 +45,7 @@ def task_subtitle(task):
             reminder_date_phrase = short_relative_formatted_date(task.reminder_date)
 
         subtitle.append(f"{_reminder} {reminder_date_phrase} \
-                        at {format_time(task.reminder_date.time(), 'short')}")
+at {format_time(task.reminder_date.time(), 'short')}")
 
     subtitle.append(task.title)
 
