@@ -3,9 +3,9 @@ import time
 import datetime
 from dateutil import tz
 
+from mstodo import config
 import mstodo.api.base as api
 from mstodo.util import NullHandler
-from mstodo import config
 
 log = logging.getLogger(__name__)
 log.addHandler(NullHandler())
@@ -43,7 +43,7 @@ def tasks(taskfolder_id=None, completed=None, dt=None, afterdt=None, fields=[]):
         start_page = time.time()
         req = api.get(next_link)
         task_data.extend(req.json()['value'])
-        log.info('Retrieved %d %s%stasks in %d seconds' % (
+        log.debug('Retrieved %d %s%stasks in %d seconds' % (
             len(req.json()['value']),
             'modified ' if afterdt else '',
             'completed ' if completed else '',

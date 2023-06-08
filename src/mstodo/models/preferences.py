@@ -11,7 +11,6 @@ EXPLICIT_KEYWORDS_KEY = 'explicit_keywords'
 HOIST_SKIPPED_TASKS_KEY = 'hoist_skipped_tasks'
 ICON_THEME_KEY = 'icon_theme'
 LAST_TASKFOLDER_ID_KEY = 'last_taskfolder_id'
-LAST_SYNC_KEY = 'last_sync'
 PRERELEASES_KEY = '__workflow_prereleases'
 REMINDER_TIME_KEY = 'reminder_time'
 REMINDER_TODAY_OFFSET_KEY = 'reminder_today_offset'
@@ -145,14 +144,6 @@ class Preferences(object):
     @last_taskfolder_id.setter
     def last_taskfolder_id(self, last_taskfolder_id):
         self._set(LAST_TASKFOLDER_ID_KEY, last_taskfolder_id)
-
-    @property
-    def last_sync(self):
-        return self._get(LAST_SYNC_KEY, None)
-
-    @last_sync.setter
-    def last_sync(self, last_sync):
-        self._set(LAST_SYNC_KEY, last_sync)
 
     @property
     def due_order(self):

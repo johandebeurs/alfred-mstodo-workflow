@@ -18,7 +18,7 @@ def build(c, initial=False):
     subtasks.package_workflow(c, env="dev")
 
 @task
-def watch(c, changed_files=None):
+def monitor(c, changed_files=None):
     # if there are changes in the /src directory, then re-run the build-dev tasks
     # this means re-copy relevant files to destination and recreate the workflow
     print("Watching files for changes:")
@@ -26,7 +26,7 @@ def watch(c, changed_files=None):
         from watchfiles import watch
         for changes in watch('./src', './screenshots','./changelog.md', './README.md'):
             changed_files = [change[1].removeprefix(os.getcwd() + '/') for change in changes] # unpacks the set of FileChanges into a list of absolute paths
-            watch(c, changed_files=changed_files)
+            monitor(c, changed_files=changed_files)
     
     subtasks.minify(c,changed_files=changed_files)
     subtasks.copy(c,changed_files=changed_files)
@@ -44,4 +44,4 @@ def test(c):
     print("Running Pytest")
     subtasks.test(c)
 
-namespace = Collection(clean, build, watch, release, test, subtasks)
+namespace = Collection(clean, build, monitor, release, test, subtasks)

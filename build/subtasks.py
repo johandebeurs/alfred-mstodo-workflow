@@ -150,6 +150,6 @@ def release(c):
         c.run(f"sed -i '' 's#__githubslug__#{__githubslug__}#g' changelog.md")
     title = re.escape(open('./changelog.md').read().splitlines()[0].removeprefix('# '))
     release_cmd = f"gh release create {__version__} {paths.dist_workflow} --title {title} --notes-file {paths.tmp}/changelog.md"
-    if not re.search('[a-z]',__version__) is None:
+    if '-' in __version__:
         release_cmd = release_cmd + ' --prerelease'
     c.run(release_cmd)

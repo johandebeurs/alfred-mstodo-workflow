@@ -120,7 +120,7 @@ class Task(BaseModel):
             job = executor.submit(lambda p: tasks.tasks(**p),kwargs)
             tasks_data = job.result()
 
-        log.info("Retrieved all {} task ids in {} seconds".format(len(tasks_data), round(time.time() - start, 3)))
+        log.debug("Retrieved all {} task ids in {} seconds".format(len(tasks_data), round(time.time() - start, 3)))
         start = time.time()
 
         try:
@@ -129,7 +129,7 @@ class Task(BaseModel):
         except PeeweeException:
             pass
 
-        log.info("Retrieved all {} tasks from database in {} seconds"\
+        log.debug("Retrieved all {} tasks from database in {} seconds"\
                  .format(len(instances), round(time.time() - start, 3)))
         start = time.time()
 
@@ -137,7 +137,7 @@ class Task(BaseModel):
         cls._perform_updates(instances, tasks_data)
         cls._sync_children()
 
-        log.info("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
+        log.debug("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
 
         return None
 
@@ -145,13 +145,15 @@ class Task(BaseModel):
     def sync_modified_tasks(cls, background=False):
         from mstodo.api import tasks
         from concurrent import futures
-        from mstodo.models.preferences import Preferences
+        from workflow import Workflow
+        wf = Workflow()
         start = time.time()
         instances = []
         all_tasks = []
 
         # Remove 60 seconds to make sure all recent tasks are included
-        dt = Preferences.current_prefs().last_sync - timedelta(seconds=60)
+        # dt = Preferences.current_prefs().last_sync - timedelta(seconds=60)
+        dt = wf.cached_data('last_sync', max_age=0) - timedelta(seconds=60)
 
         # run a single future for all tasks modified since last run
         with futures.ThreadPoolExecutor() as executor:
@@ -168,7 +170,7 @@ class Task(BaseModel):
             )
             for job in futures.as_completed(jobs):
                 all_tasks += job.result()
-                log.debug(job.result())
+                # log.debug(job.result())
 
         # if task in modified_tasks then remove from all taskfolder data
         modified_tasks_ids = [task['id'] for task in modified_tasks]
@@ -177,7 +179,7 @@ class Task(BaseModel):
                 all_tasks.remove(task)
         all_tasks.extend(modified_tasks)
 
-        log.info("Retrieved all {} including {} modifications since {} in {} seconds" \
+        log.debug("Retrieved all {} including {} modifications since {} in {} seconds" \
                  .format(len(all_tasks), len(modified_tasks), dt, round(time.time() - start, 3)))
         start = time.time()
 
@@ -187,14 +189,15 @@ class Task(BaseModel):
         except PeeweeException:
             pass
 
-        log.info("Loaded all {} from database in {} seconds".format(len(instances), round(time.time() - start, 3)))
+        log.debug("Loaded all {} from database in {} seconds".format(len(instances), round(time.time() - start, 3)))
         start = time.time()
 
         all_tasks = cls.transform_datamodel(all_tasks)
         cls._perform_updates(instances, all_tasks)
-        cls._sync_children()
+        # cls._sync_children()
+        #FIXME this causes errors, need to refactor
 
-        log.info("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
+        log.debug("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
 
         return None
 

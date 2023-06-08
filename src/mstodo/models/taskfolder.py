@@ -25,7 +25,7 @@ class TaskFolder(BaseModel):
         taskfolders_data = taskfolders.taskfolders()
         instances = []
 
-        log.info("Retrieved all {} task folders in {} seconds"\
+        log.debug("Retrieved all {} task folders in {} seconds"\
                  .format(len(taskfolders_data), round(time.time() - start, 3)))
         start = time.time()
 
@@ -43,7 +43,7 @@ class TaskFolder(BaseModel):
         except PeeweeException:
             pass
 
-        log.info("Loaded all {} task folders from the database in {} seconds"\
+        log.debug("Loaded all {} task folders from the database in {} seconds"\
                  .format(len(instances), round(time.time() - start, 3)))
 
         return cls._perform_updates(instances, taskfolders_data)

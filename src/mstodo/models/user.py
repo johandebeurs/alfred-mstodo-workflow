@@ -31,7 +31,7 @@ class User(BaseModel):
         start = time.time()
         instance = None
         user_data = user.user()
-        log.info('Retrieved User in %0.3f' % (time.time() - start))
+        log.debug('Retrieved User in %0.3f' % (time.time() - start))
 
         try:
             instance = cls.get()

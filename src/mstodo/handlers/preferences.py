@@ -249,7 +249,7 @@ def commit(args, modifier=None):
         relaunch_command = ' '.join(args[args.index('--alfred') + 1:])
     if 'sync' in args:
         from mstodo.sync import sync
-        sync(background='background' in args)
+        sync(background=('background' in args))
         relaunch_command = None
     elif 'show_completed_tasks' in args:
         prefs.show_completed_tasks = not prefs.show_completed_tasks

@@ -79,10 +79,9 @@ class BaseModel(Model):
             if id in instances_by_id and 'changeKey' in item and instances_by_id[id].changeKey == item['changeKey']:
                 instance = instances_by_id[id] # read the single value from the database
                 del instances_by_id[id] # remove it from our database list
-                if type(instance)._meta.expect_revisions:
-                    logger = log.info
-
-                logger("Revision {} of {} is still the latest".format(instance.changeKey, instance))
+                # if type(instance)._meta.expect_revisions:
+                #     logger = log.info
+                # logger("Revision {} of {} is still the latest".format(instance.changeKey, instance))
 
                 return False
             logger("Item {} needs to be updated".format(id))
@@ -94,7 +93,7 @@ class BaseModel(Model):
         # Map of id to the normalized item
         changed_items = dict((item['id'], cls._api2model(item)) for item in changed_items)
         all_instances = []
-        log.info("Prepared {} of {} in {} seconds"\
+        log.debug("Prepared {} of {} in {} seconds"\
                  .format(len(changed_items), len(update_items), round(time.time() - start, 3)))
 
         # Update all the changed metadata and remove instances that no longer exist
@@ -109,10 +108,10 @@ class BaseModel(Model):
                     all_instances.append(instance)
 
                     if cls._meta.has_children:
-                        log.info("Syncing children of {}".format(instance))
+                        log.debug("Syncing children of {}".format(instance))
                         instance._sync_children()
                     cls.update(**changed_item).where(cls.id == id).execute()
-                    log.info("Updated {} in db to revision {}".format(
+                    log.debug("Updated {} in db to revision {}".format(
                         instance, changed_item['changeKey'] if 'changeKey' in changed_item else 'N/A'
                     ))
                     log.debug("with data {}".format(changed_item))
@@ -121,7 +120,7 @@ class BaseModel(Model):
                 # The model does not exist anymore
                 else:
                     instance.delete_instance()
-                    log.info("Deleted {} from db".format(instance))
+                    log.debug("Deleted {} from db".format(instance))
 
         # Bulk insert and retrieve
         new_values = list(changed_items.values())
@@ -133,14 +132,14 @@ class BaseModel(Model):
             with db.atomic():
                 cls.insert_many(inserted_chunk).execute()
 
-                log.info("Created {} of model {} in db".format(len(inserted_chunk), cls.__name__))
+                log.debug("Created {} of model {} in db".format(len(inserted_chunk), cls.__name__))
 
                 inserted_ids = [i['id'] for i in inserted_chunk]
                 inserted_instances = cls.select().where(cls.id.in_(inserted_ids)) # read from db again
 
                 for instance in inserted_instances:
                     if type(instance)._meta.has_children:
-                        log.info("Syncing children of {}".format(instance))
+                        log.debug("Syncing children of {}".format(instance))
                         instance._sync_children()
 
                 all_instances += inserted_instances

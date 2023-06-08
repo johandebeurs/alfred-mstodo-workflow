@@ -3,8 +3,8 @@ import time
 
 from requests import codes
 
-import mstodo.api.base as api
 from mstodo import config
+import mstodo.api.base as api
 from mstodo.util import NullHandler
 
 log = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ def taskfolders(order='display', task_counts=False):
         if '@odata.nextLink' in req.json():
             next_link= req.json()['@odata.nextLink'].replace(config.MS_TODO_API_BASE_URL + '/','')
         else:
-            log.info('Retrieved taskFolders in %0.3f seconds' % (time.time() - start))
+            log.debug('Retrieved taskFolders in %0.3f seconds' % (time.time() - start))
             break
 
     if task_counts:

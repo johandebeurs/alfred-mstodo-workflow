@@ -2,7 +2,7 @@ import logging
 
 from datetime import date, datetime, timedelta
 from workflow import Workflow
-from mstodo import __githubslug__
+from mstodo import __githubslug__, __version__
 
 try:
     from logging import NullHandler
@@ -21,11 +21,12 @@ def wf_wrapper():
             capture_args=False,
             update_settings={
                 'github_slug': __githubslug__,
+                'version':__version__,
                 # Check for updates daily
                 #@TODO: check less frequently as the workflow becomes more
                 # stable
                 'frequency': 1,
-                #@TODO Check if a prerelease is installed and set flag to true if so
+                'prerelease': '-' in __version__
             }
         )
 

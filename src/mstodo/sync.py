@@ -6,7 +6,6 @@ from datetime import datetime
 from workflow.notify import notify
 from workflow.background import is_running
 
-from mstodo.models.preferences import Preferences
 from mstodo.util import wf_wrapper
 
 log = logging.getLogger(__name__)
@@ -74,7 +73,7 @@ def sync(background=False):
         user.User.get()
     except user.User.DoesNotExist:
         first_sync = True
-        Preferences.current_prefs().last_sync = datetime.utcnow()
+        wf.cache_data('last_sync',datetime.utcnow())
         notify(
             title='Please wait...',
             message='The workflow is syncing tasks for the first time'
@@ -86,17 +85,19 @@ def sync(background=False):
         task.Task.sync_all_tasks(background=background)
     else:
         task.Task.sync_modified_tasks(background=background)
+    hashtag.Hashtag.sync(background=background)
+    #@TODO move this into a child sync of the relevant tasks once bugfix is completed
 
-    if background and first_sync:
+    if first_sync:
         notify(
             title='Initial sync has completed',
             message='All of your tasks are now available for browsing'
         )
 
     log.debug('First sync: ' + str(first_sync))
-    log.debug('Last sync time: ' + str(Preferences.current_prefs().last_sync))
-    Preferences.current_prefs().last_sync = datetime.utcnow()
-    log.debug('This sync time: ' + str(Preferences.current_prefs().last_sync))
+    log.debug('Last sync time: ' + str(wf.cached_data('last_sync',max_age=0)))
+    wf.cache_data('last_sync',datetime.utcnow())
+    log.debug('This sync time: ' + str(wf.cached_data('last_sync')))
     return True
 
 
@@ -115,7 +116,7 @@ def background_sync():
 
 
 def background_sync_if_necessary(seconds=30):
-    last_sync = Preferences.current_prefs().last_sync
+    last_sync = wf.cached_data('last_sync', max_age=0)
 
     # Avoid syncing on every keystroke, background_sync will also prevent
     # multiple concurrent syncs
