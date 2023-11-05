@@ -2,5 +2,5 @@ alfred-pyworkflow==2.0.0b2
 msal==1.22.0
 parsedatetime==2.6
 peewee==3.16.2
-requests==2.28.2
+requests==2.31.0
 python-dateutil==2.8.2
