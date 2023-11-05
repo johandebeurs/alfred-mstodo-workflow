@@ -5,8 +5,6 @@ from workflow import PasswordNotFound
 from mstodo import config, __version__, __title__
 from mstodo.util import wf_wrapper
 
-#@TODO Check if we should use msal logger
-# https://learn.microsoft.com/en-gb/azure/active-directory/develop/msal-logging-python#configure-msal-logging-level
 log = logging.getLogger(__name__)
 wf = wf_wrapper()
 
@@ -30,7 +28,6 @@ def is_authorised():
     try:
         # Attempt to load cached credentials from keychain
         cache.deserialize(wf.get_password('msal'))
-        log.debug("Stored data retrieved from keychain")
         return True
     except PasswordNotFound:
         # This is the first run or the workflow has been deauthorized
@@ -77,7 +74,6 @@ def oauth_token():
     accounts = app.get_accounts()
     if accounts:
         result = app.acquire_token_silent(scopes=config.MS_TODO_SCOPE, account=accounts[0])
-        if "access_token" in result:
-            return result['access_token']
+        return result.get('access_token')
     else:
         return None

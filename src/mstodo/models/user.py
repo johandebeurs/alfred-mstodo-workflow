@@ -4,13 +4,13 @@ import time
 from peewee import TextField, CharField
 
 from mstodo.models.base import BaseModel
-from mstodo.util import NullHandler
 
 log = logging.getLogger(__name__)
-log.addHandler(NullHandler())
-
 
 class User(BaseModel):
+    """
+    Extends the Base class and refines it for the User data structure 
+    """
     id = CharField(primary_key=True)
     name = TextField(null=True)
     displayName = TextField(null=True)
@@ -25,13 +25,13 @@ class User(BaseModel):
     # businessPhones": [],
 
     @classmethod
-    def sync(cls, background=False):
+    def sync(cls):
         from mstodo.api import user
 
         start = time.time()
         instance = None
         user_data = user.user()
-        log.debug('Retrieved User in %0.3f' % (time.time() - start))
+        log.debug(f"Retrieved User in {round(time.time() - start, 3)}")
 
         try:
             instance = cls.get()

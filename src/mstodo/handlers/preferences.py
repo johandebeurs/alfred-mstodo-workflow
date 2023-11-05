@@ -7,7 +7,7 @@ from workflow.notify import notify
 from mstodo import icons
 from mstodo.models.preferences import Preferences, DEFAULT_TASKFOLDER_MOST_RECENT
 from mstodo.models.user import User
-from mstodo.util import format_time, parsedatetime_calendar, relaunch_alfred, user_locale, wf_wrapper
+from mstodo.util import format_time, parsedatetime_calendar, relaunch_alfred, user_locale, wf_wrapper, SYMBOLS
 
 wf = wf_wrapper()
 
@@ -38,7 +38,7 @@ def _format_time_offset(dt):
 
     return ' '.join(offset)
 
-def filter(args):
+def display(args):
     prefs = Preferences.current_prefs()
 
     if 'reminder' in args:
@@ -47,7 +47,7 @@ def filter(args):
         if reminder_time is not None:
             wf.add_item(
                 'Change default reminder time',
-                f"⏰ {format_time(reminder_time, 'short')}",
+                f"{SYMBOLS['reminder']} {format_time(reminder_time, 'short')}",
                 arg=' '.join(args), valid=True, icon=icons.REMINDER
             )
         else:
@@ -67,7 +67,7 @@ def filter(args):
         if reminder_today_offset is not None:
             wf.add_item(
                 'Set a custom reminder offset',
-                f"⏰ now + {_format_time_offset(reminder_today_offset)}",
+                f"{SYMBOLS['reminder']} now + {_format_time_offset(reminder_today_offset)}",
                 arg=' '.join(args), valid=True, icon=icons.REMINDER
             )
         else:
@@ -177,14 +177,15 @@ def filter(args):
 
         wf.add_item(
             'Default reminder time',
-            f"⏰ {format_time(prefs.reminder_time, 'short')}      Reminders without a specific time will be set to this time",
+            f"{SYMBOLS['reminder']} {format_time(prefs.reminder_time, 'short')}      Reminders without a specific time \
+will be set to this time",
             autocomplete='-pref reminder ', icon=icons.REMINDER
         )
 
         wf.add_item(
             'Default reminder when due today',
-            f"⏰ {_format_time_offset(prefs.reminder_today_offset)}      Default reminder time for tasks due today is \
-{'relative to the current time' if prefs.reminder_today_offset else 'always %s' % format_time(prefs.reminder_time, 'short')}",
+            f"""{SYMBOLS['reminder']} {_format_time_offset(prefs.reminder_today_offset)}      Default reminder time \
+for tasks due today is {'relative to the current time' if prefs.reminder_today_offset else f"always {format_time(prefs.reminder_time, 'short')}"}""",
             autocomplete='-pref reminder_today ', icon=icons.REMINDER
         )
 
@@ -249,7 +250,7 @@ def commit(args, modifier=None):
         relaunch_command = ' '.join(args[args.index('--alfred') + 1:])
     if 'sync' in args:
         from mstodo.sync import sync
-        sync(background=('background' in args))
+        sync(background='background' in args)
         relaunch_command = None
     elif 'show_completed_tasks' in args:
         prefs.show_completed_tasks = not prefs.show_completed_tasks

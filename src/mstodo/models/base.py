@@ -6,10 +6,9 @@ from dateutil import parser
 from peewee import (DateField, DateTimeField, ForeignKeyField, Model,
                     SqliteDatabase, TimeField)
 
-from mstodo.util import wf_wrapper, NullHandler
+from mstodo.util import wf_wrapper
 
 log = logging.getLogger(__name__)
-log.addHandler(NullHandler())
 
 db = SqliteDatabase(wf_wrapper().datadir + '/mstodo.db')
 # This writes a SQLiteDB to ~/Library/Application Support/Alfred/Workflow Data/<this workflow>
@@ -29,6 +28,11 @@ def _balance_keys_for_insert(values):
     return balanced_values
 
 class BaseModel(Model):
+    """
+    Extends the Peewee model class and refines it for MS ToDo API structures.
+    Holds methods to unpack APIs to database models, update data and perform
+    actions on child items for an entity
+    """
     @classmethod
     def _api2model(cls, data):
         fields = copy(cls._meta.fields)
@@ -74,17 +78,11 @@ class BaseModel(Model):
         # before any additional processing on the metadata
         def revised(item):
             id = item['id']
-            logger = log.debug
             # if api task is in database, has a changeKey and is unchanged
             if id in instances_by_id and 'changeKey' in item and instances_by_id[id].changeKey == item['changeKey']:
-                instance = instances_by_id[id] # read the single value from the database
-                del instances_by_id[id] # remove it from our database list
-                # if type(instance)._meta.expect_revisions:
-                #     logger = log.info
-                # logger("Revision {} of {} is still the latest".format(instance.changeKey, instance))
-
+                del instances_by_id[id] # remove the item from our database list
                 return False
-            logger("Item {} needs to be updated".format(id))
+
             return True
 
         # changed items is the list of API data if it is updated based on the logic above
@@ -93,8 +91,8 @@ class BaseModel(Model):
         # Map of id to the normalized item
         changed_items = dict((item['id'], cls._api2model(item)) for item in changed_items)
         all_instances = []
-        log.debug("Prepared {} of {} in {} seconds"\
-                 .format(len(changed_items), len(update_items), round(time.time() - start, 3)))
+        log.debug(f"Prepared {len(changed_items)} of {len(update_items)} {cls.__name__}s \
+in {round(time.time() - start, 3)} seconds")
 
         # Update all the changed metadata and remove instances that no longer exist
         with db.atomic():
@@ -108,19 +106,18 @@ class BaseModel(Model):
                     all_instances.append(instance)
 
                     if cls._meta.has_children:
-                        log.debug("Syncing children of {}".format(instance))
+                        log.debug(f"Syncing children of {instance}")
                         instance._sync_children()
                     cls.update(**changed_item).where(cls.id == id).execute()
-                    log.debug("Updated {} in db to revision {}".format(
-                        instance, changed_item['changeKey'] if 'changeKey' in changed_item else 'N/A'
-                    ))
-                    log.debug("with data {}".format(changed_item))
+                    if changed_item.get('changeKey'):
+                        log.debug(f"Updated {instance} in db to revision {changed_item.get('changeKey')}")
+                        log.debug(f"with data {changed_item}")
                     # remove changed items from list to leave only new items
                     del changed_items[id]
                 # The model does not exist anymore
                 else:
                     instance.delete_instance()
-                    log.debug("Deleted {} from db".format(instance))
+                    log.debug(f"Deleted {instance} from db")
 
         # Bulk insert and retrieve
         new_values = list(changed_items.values())
@@ -132,14 +129,14 @@ class BaseModel(Model):
             with db.atomic():
                 cls.insert_many(inserted_chunk).execute()
 
-                log.debug("Created {} of model {} in db".format(len(inserted_chunk), cls.__name__))
+                log.debug(f"Created {len(inserted_chunk)} of model {cls.__name__} in db")
 
                 inserted_ids = [i['id'] for i in inserted_chunk]
                 inserted_instances = cls.select().where(cls.id.in_(inserted_ids)) # read from db again
 
                 for instance in inserted_instances:
                     if type(instance)._meta.has_children:
-                        log.debug("Syncing children of {}".format(instance))
+                        log.debug(f"Syncing children of {instance}")
                         instance._sync_children()
 
                 all_instances += inserted_instances
@@ -156,7 +153,10 @@ class BaseModel(Model):
     def _sync_children(self):
         pass
 
-    class Meta(object):
+    class Meta():
+        """
+        Default metadata for the base model object
+        """
         database = db
         expect_revisions = False
         has_children = False

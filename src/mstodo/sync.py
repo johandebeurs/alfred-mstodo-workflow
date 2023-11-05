@@ -12,7 +12,6 @@ log = logging.getLogger(__name__)
 wf = wf_wrapper()
 
 def sync(background=False):
-    log.info('running mstodo/sync')
     from mstodo.models import base, task, user, taskfolder, hashtag
     from peewee import OperationalError
 
@@ -25,7 +24,7 @@ def sync(background=False):
                 time.sleep(.25)
                 wait_count += 1
 
-                if wait_count >= 2:
+                if wait_count == 2:
                     notify(
                         title='Please wait...',
                         message='The workflow is making sure your tasks are up-to-date'
@@ -33,6 +32,7 @@ def sync(background=False):
 
             return False
 
+        log.info("Running manual sync")
         notify(
             title='Manual sync initiated',
             message='The workflow is making sure your tasks are up-to-date'
@@ -43,6 +43,8 @@ def sync(background=False):
             #@TODO check if this needs to be byte-written? May be due to pickling the program state?
             # file_obj.write(os.getpid().to_bytes(length=4, byteorder=sys.byteorder))
             file_obj.write(str(os.getpid()))
+    else:
+        log.info('Running background sync')
 
 
     base.BaseModel._meta.database.create_tables([
@@ -79,31 +81,33 @@ def sync(background=False):
             message='The workflow is syncing tasks for the first time'
         )
 
-    user.User.sync(background=background)
-    taskfolder.TaskFolder.sync(background=background)
+    user.User.sync()
+    taskfolder.TaskFolder.sync()
     if first_sync:
-        task.Task.sync_all_tasks(background=background)
+        task.Task.sync_all_tasks()
     else:
-        task.Task.sync_modified_tasks(background=background)
-    hashtag.Hashtag.sync(background=background)
+        task.Task.sync_modified_tasks()
+    hashtag.Hashtag.sync()
     #@TODO move this into a child sync of the relevant tasks once bugfix is completed
 
-    if first_sync:
+    sync_completion_time = datetime.utcnow()
+
+    if first_sync or not background:
+        log.info(f"Sync completed at {sync_completion_time}")
         notify(
-            title='Initial sync has completed',
+            title='Sync has completed',
             message='All of your tasks are now available for browsing'
         )
 
-    log.debug('First sync: ' + str(first_sync))
-    log.debug('Last sync time: ' + str(wf.cached_data('last_sync',max_age=0)))
-    wf.cache_data('last_sync',datetime.utcnow())
-    log.debug('This sync time: ' + str(wf.cached_data('last_sync')))
+    wf.cache_data('last_sync',sync_completion_time)
+    log.debug(f"This sync time: {sync_completion_time}")
     return True
 
 
 def background_sync():
     from workflow.background import run_in_background
     task_id = 'sync'
+    log.debug(f"Last sync time was: {str(wf.cached_data('last_sync', max_age=0))}")
 
     # Only runs if another sync is not already in progress
     run_in_background(task_id, [

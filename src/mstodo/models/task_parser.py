@@ -56,7 +56,11 @@ RECURRENCE_TYPES = {
 }
 
 
-class TaskParser(object):
+class TaskParser():
+    """
+    Utility function to handle task creation and split out relevant content into title, note, recurrence, 
+    reminder and so on.
+    """
     phrase = None
     title = None
     list_id = None

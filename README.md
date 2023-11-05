@@ -206,7 +206,7 @@ Limitations
 Contributing
 ------------
 
-So you want to help make this workflow better? That's great! After cloning the repository, activate a virtual environment (I recommend using `python -m venv .venv && source .venv/bin/activate`), then run `pip install -r requirements.txt --target=./lib` and `pip install -r requirements-dev.txt` to set up the environment for building. Running `invoke -r build build` will build the workflow for development. Open the _mstodo-symlinked.alfredworkflow_ file to install a copy in Alfred that will update whenever you rebuild the workflow. Run `invoke -r build monitor` to monitor the /src folder and automatically re-build the workflow on any file changes. Using this process, the workflow is kept up-to-date while you work.
+So you want to help make this workflow better? That's great! After cloning the repository, activate a virtual environment (I recommend using `python -m venv .venv && source .venv/bin/activate`), then run `pip install -r requirements.txt --target=./lib` and `pip install -r requirements-dev.txt` to set up the environment for building. Running `invoke -r build build --initial` will build the workflow for development. Open the _mstodo-symlinked.alfredworkflow_ file to install a copy in Alfred that will update whenever you rebuild the workflow. Run `invoke -r build monitor` to monitor the /src folder and automatically re-build the workflow on any file changes. Using this process, the workflow is kept up-to-date while you work.
 
 Settings and launch configs for VSCode are included in the git repo to smooth development and testing if you are using this IDE, including altering pythonpath for debugging. You may want to replicate/modify these if you are using Pycharm or other editors.
 

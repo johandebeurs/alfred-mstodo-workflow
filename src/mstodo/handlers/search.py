@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 _hashtag_prompt_pattern = re.compile(r'#\S*$', re.UNICODE)
 
-def filter(args):
+def display(args):
     query = ' '.join(args[1:])
     wf = wf_wrapper()
     prefs = Preferences.current_prefs()

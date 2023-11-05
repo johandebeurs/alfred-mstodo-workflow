@@ -1,9 +1,9 @@
 # encoding: utf-8
 
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 import logging
 
-from peewee import JOIN, OperationalError
+from peewee import OperationalError
 
 from mstodo import icons
 from mstodo.models.preferences import Preferences
@@ -55,7 +55,7 @@ def _duration_info(days):
     }
 
 
-def filter(args):
+def display(args):
     wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     command = args[1] if len(args) > 1 else None

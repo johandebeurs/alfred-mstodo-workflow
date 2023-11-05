@@ -10,16 +10,19 @@ _hashtag_pattern = re.compile(r'(?<=\s)#\S+', re.UNICODE)
 _hashtag_trim_pattern = re.compile(r'\W+$', re.UNICODE)
 
 class Hashtag(BaseModel):
+    """
+    Extends the Base class and refines it for the Hashtag data structure 
+    """
     id = CharField(primary_key=True)
     tag = CharField()
     revision = IntegerField(default=0)
 
     @classmethod
-    def sync(cls, background=False):
+    def sync(cls):
         from mstodo.models.task import Task
 
         tasks_with_hashtags = Task.select().where(Task.title.contains('#'))
-        hashtags = dict()
+        hashtags = {}
 
         for task in tasks_with_hashtags:
             for hashtag in cls.hashtags_in_task(task):

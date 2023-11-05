@@ -1,0 +1,9 @@
+# Python3 refactor\n
+\n
+New in version __version__:\n
+* Refactored update handling and should now prompt for automatic updates as releases are up on GitHub\n
+* Revised logging for more useful data. Primary logs are stored in workflow.log within the main workflow directory, minimal data is logged to Alfred\'s debug window\n
+* Pylint style changes\n
+\n
+For more details:\n
+https://github.com/__githubslug__/releases/tag/__version__\n

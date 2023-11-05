@@ -5,8 +5,11 @@ from peewee import DateTimeField
 from mstodo.util import utc_to_local
 
 class DateTimeUTCField(DateTimeField):
+    """
+    Extends Peewee's datetime field with timezone awareness
+    """
     def python_value(self, value):
-        value = super(DateTimeUTCField, self).python_value(value)
+        value = super().python_value(value)
 
         if isinstance(value, datetime):
             value = value.replace(tzinfo=tzutc())
@@ -16,18 +19,18 @@ class DateTimeUTCField(DateTimeField):
         if isinstance(value, datetime):
             value = value.replace(tzinfo=None)
 
-        return super(DateTimeUTCField, self).db_value(value)
+        return super().db_value(value)
 
     def _get_local_datetime_descriptor(self):
         return LocalDateTimeDescriptor(self)
 
     def add_to_class(self, model_class, name):
         """Add a corresponding property with the local datetime"""
-        super(DateTimeUTCField, self).add_to_class(model_class, name)
+        super().add_to_class(model_class, name)
 
         setattr(model_class, name + '_local', self._get_local_datetime_descriptor())
 
-class LocalDateTimeDescriptor(object):
+class LocalDateTimeDescriptor():
     """Gives direct access to the localized datetime"""
     def __init__(self, field):
         self.attr_name = field.name

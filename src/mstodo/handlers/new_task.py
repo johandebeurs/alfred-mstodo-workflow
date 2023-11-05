@@ -9,12 +9,7 @@ from workflow.notify import notify
 from mstodo import icons
 from mstodo.models.preferences import Preferences
 from mstodo.models.task_parser import TaskParser
-from mstodo.util import format_time, short_relative_formatted_date, wf_wrapper
-
-_star = '★'
-_recurrence = '↻'
-_reminder = '⏰'
-_note = '✏️'
+from mstodo.util import format_time, short_relative_formatted_date, wf_wrapper, SYMBOLS
 
 def _task(args):
     return TaskParser(' '.join(args))
@@ -23,19 +18,19 @@ def task_subtitle(task):
     subtitle = []
 
     if task.starred:
-        subtitle.append(_star)
+        subtitle.append(SYMBOLS['star'])
 
     if task.due_date:
         subtitle.append(f"Due {short_relative_formatted_date(task.due_date)}")
 
     if task.recurrence_type:
         if task.recurrence_count > 1:
-            subtitle.append(f"{_recurrence} Every {task.recurrence_count} {task.recurrence_type}s")
+            subtitle.append(f"{SYMBOLS['recurrence']} Every {task.recurrence_count} {task.recurrence_type}s")
         # Cannot simply add -ly suffix
         elif task.recurrence_type == 'day':
-            subtitle.append(f"{_recurrence} Daily")
+            subtitle.append(f"{SYMBOLS['recurrence']} Daily")
         else:
-            subtitle.append(f"{_recurrence} {task.recurrence_type.title()}ly")
+            subtitle.append(f"{SYMBOLS['recurrence']} {task.recurrence_type.title()}ly")
 
     if task.reminder_date:
         reminder_date_phrase = None
@@ -44,17 +39,17 @@ def task_subtitle(task):
         else:
             reminder_date_phrase = short_relative_formatted_date(task.reminder_date)
 
-        subtitle.append(f"{_reminder} {reminder_date_phrase} \
+        subtitle.append(f"{SYMBOLS['reminder']} {reminder_date_phrase} \
 at {format_time(task.reminder_date.time(), 'short')}")
 
     subtitle.append(task.title)
 
     if task.note:
-        subtitle.append(f"{_note} {task.note}")
+        subtitle.append(f"{SYMBOLS['note']} {task.note}")
 
     return '   '.join(subtitle)
 
-def filter(args):
+def display(args):
     task = _task(args)
     subtitle = task_subtitle(task)
     wf = wf_wrapper()

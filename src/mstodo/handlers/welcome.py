@@ -1,7 +1,7 @@
 from mstodo import icons
 from mstodo.util import wf_wrapper
 
-def filter(args):
+def display(args):
     wf = wf_wrapper()
     wf.add_item(
         'New task...',

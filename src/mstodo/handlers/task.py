@@ -12,14 +12,10 @@ from mstodo.util import wf_wrapper
 
 log = logging.getLogger(__name__)
 
-_star = '★'
-_recurrence = '↻'
-_reminder = '⏰'
-
 def _task(args):
     return TaskParser(' '.join(args))
 
-def filter(args):
+def display(args):
     task_id = args[1]
     wf = wf_wrapper()
     task = None

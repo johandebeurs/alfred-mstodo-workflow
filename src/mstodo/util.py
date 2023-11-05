@@ -4,14 +4,16 @@ from datetime import date, datetime, timedelta
 from workflow import Workflow
 from mstodo import __githubslug__, __version__
 
-try:
-    from logging import NullHandler
-except ImportError:
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
-
 _workflow = None
+
+SYMBOLS = {
+    'star': '★',
+    'recurrence': '↻',
+    'reminder': '⏰',
+    'note': '✏️',
+    'overdue_1x': '⚠️',
+    'overdue_2x': '❗️'
+}
 
 def wf_wrapper():
     global _workflow
@@ -30,17 +32,15 @@ def wf_wrapper():
             }
         )
 
-        # Avoid default logger output configuration
+        # Override Alfred PyWorkflow logger output configuration
         _workflow.logger = logging.getLogger('workflow')
 
     return _workflow
-
 
 def parsedatetime_calendar():
     from parsedatetime import Calendar, VERSION_CONTEXT_STYLE
 
     return Calendar(parsedatetime_constants(), version=VERSION_CONTEXT_STYLE)
-
 
 def parsedatetime_constants():
     from parsedatetime import Constants
@@ -49,7 +49,6 @@ def parsedatetime_constants():
     loc = Preferences.current_prefs().date_locale or user_locale()
 
     return Constants(loc)
-
 
 def user_locale():
     import locale
@@ -81,20 +80,19 @@ def format_time(time, fmt):
 
     return time.strftime(expr).lstrip('0')
 
-
 def short_relative_formatted_date(dt):
-    d = dt.date() if isinstance(dt, datetime) else dt
+    dt_date = dt.date() if isinstance(dt, datetime) else dt
     today = date.today()
     # Mar 3, 2016. Note this is a naive date in local TZ
     date_format = '%b %d, %Y'
 
-    if d == today:
+    if dt_date == today:
         return 'today'
-    if d == today + timedelta(days=1):
+    if dt_date == today + timedelta(days=1):
         return 'tomorrow'
-    if d == today - timedelta(days=1):
+    if dt_date == today - timedelta(days=1):
         return 'yesterday'
-    if d.year == today.year:
+    if dt_date.year == today.year:
         # Wed, Mar 3
         date_format = '%a, %b %d'
 

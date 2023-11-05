@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 import logging
 
-from peewee import JOIN, OperationalError
+from peewee import OperationalError
 
 from mstodo import icons
 from mstodo.models.taskfolder import TaskFolder
@@ -38,7 +38,7 @@ _due_orders = (
 )
 
 
-def filter(args):
+def display(args):
     wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     command = args[1] if len(args) > 1 else None
@@ -46,7 +46,7 @@ def filter(args):
     # Show sort options
     if command == 'sort':
         for i, order_info in enumerate(_due_orders):
-            wf.add_item(order_info['title'], order_info['subtitle'], arg='-due sort %d' % (i + 1), valid=True,
+            wf.add_item(order_info['title'], order_info['subtitle'], arg=f"-due sort {(i + 1)}", valid=True,
                         icon=icons.RADIO_SELECTED if order_info['due_order'] == prefs.due_order else icons.RADIO)
 
         wf.add_item('Highlight skipped recurring tasks',

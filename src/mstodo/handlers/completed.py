@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from peewee import JOIN, OperationalError
+from peewee import OperationalError
 
 from mstodo import icons
 from mstodo.models.preferences import Preferences
@@ -10,8 +10,6 @@ from mstodo.models.task import Task
 from mstodo.models.taskfolder import TaskFolder
 from mstodo.sync import background_sync, background_sync_if_necessary
 from mstodo.util import relaunch_alfred, wf_wrapper
-
-_hashtag_prompt_pattern = r'#\S*$'
 
 _durations = [
     {
@@ -51,16 +49,16 @@ def _duration_info(days):
 
     if len(duration_info) > 0:
         return duration_info[0]
-    else:
-        return {
-            'days': days,
-            'label': _default_label(days),
-            'subtitle': 'Your custom duration',
-            'custom': True
-        }
+
+    return {
+        'days': days,
+        'label': _default_label(days),
+        'subtitle': 'Your custom duration',
+        'custom': True
+    }
 
 
-def filter(args):
+def display(args):
     wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     command = args[1] if len(args) > 1 else None

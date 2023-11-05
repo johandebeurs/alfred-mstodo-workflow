@@ -4,17 +4,12 @@ import requests
 from mstodo import config
 from mstodo.auth import oauth_token
 
-_oauth_token = None
-
 def _request_headers():
-    global _oauth_token
-
-    if not _oauth_token:
-        _oauth_token = oauth_token()
+    _oauth_token = oauth_token()
 
     if _oauth_token:
         return {
-            'Authorization': 'Bearer ' + _oauth_token
+            'Authorization': f"Bearer {_oauth_token}"
         }
     return None
 

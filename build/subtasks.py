@@ -3,8 +3,7 @@ import os, sys
 import glob
 from invoke import task
 
-sys.path.append(os.path.join(sys.path[0],'../src')) # enables import below. @TODO see if this can be improved
-from mstodo import __version__, __githubslug__
+sys.path.append(os.path.join(sys.path[0],'../src')) # enables imports from src/__init__.py. @TODO see if this can be improved
 
 @task
 def clean(c):
@@ -50,7 +49,6 @@ def copy(c, changed_files=None):
     app_files = glob.glob(f"{paths.app_module}/**/*.py", recursive=True)
     app_files.extend(glob.glob(f"{paths.app}/*.py"))
     app_files.extend(glob.glob(f"{paths.app}/*.ini"))
-    app_files.extend(glob.glob(f"{paths.app}/*.plist"))
     app_files.extend(glob.glob(f"{paths.app}/version"))
     if changed_files: app_files = list(set(app_files) & set(changed_files))
     for app_file in app_files:
@@ -104,12 +102,15 @@ def symlink(c):
 @task()
 def replace(c):
     import re
-    print(" Replacing placeholders in Alfred .plist file...")
-    changelog = re.escape(open('./changelog.md').read())
+    from mstodo import get_version, get_github_slug
+    print(" Copying Alfred .plist file and replacing placeholders...")
+    changelog = re.escape(open('./changelog.md').read()) .replace("'","\&#39") # replace ' given challenges with passing string via c.run
+    c.run(f"ditto {paths.app}/info.plist {paths.dist_app}")
     with c.cd(paths.dist_app):
-        c.run(f"sed -i '' 's#__changelog__#{changelog}#g' info.plist")
-        c.run(f"sed -i '' 's#__version__#{__version__}#g' info.plist")
-        c.run(f"sed -i '' 's#__githubslug__#{__githubslug__}#g' info.plist")
+        c.run("sed -i '' 's|__changelog__|{}|g' info.plist".format(changelog))
+        c.run("""sed -i "" "s|\\&#39|'|g" info.plist""")
+        c.run(f"sed -i '' 's#__version__#{get_version()}#g' info.plist")
+        c.run(f"sed -i '' 's#__githubslug__#{get_github_slug()}#g' info.plist")
     return
 
 @task(pre=[symlink, replace])
@@ -142,14 +143,18 @@ def test(c):
 
 @task
 def release(c):
-    print(" Creating release")
     import re
+    from mstodo import get_version, get_github_slug
+    print(" Creating release")
+    version = get_version()
+    title = re.escape(open('./changelog.md').read().splitlines()[0].removeprefix('# '))
     c.run(f"cp ./changelog.md {paths.tmp}/changelog.md")
     with c.cd(paths.tmp):
-        c.run(f"sed -i '' 's#__version__#{__version__}#g' changelog.md")
-        c.run(f"sed -i '' 's#__githubslug__#{__githubslug__}#g' changelog.md")
-    title = re.escape(open('./changelog.md').read().splitlines()[0].removeprefix('# '))
-    release_cmd = f"gh release create {__version__} {paths.dist_workflow} --title {title} --notes-file {paths.tmp}/changelog.md"
-    if '-' in __version__:
+        c.run(f"sed -i '' '1,2d' changelog.md")
+        c.run(f"sed -i '' 's#__version__#{version}#g' changelog.md")
+        c.run(f"sed -i '' 's#__githubslug__#{get_github_slug()}#g' changelog.md")
+
+    release_cmd = f"gh release create {version} {paths.dist_workflow} --title {title} --notes-file {paths.tmp}/changelog.md"
+    if '-' in version:
         release_cmd = release_cmd + ' --prerelease'
     c.run(release_cmd)

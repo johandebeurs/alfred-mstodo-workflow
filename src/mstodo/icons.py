@@ -1,7 +1,7 @@
 from mstodo.models.preferences import Preferences
 from mstodo.util import wf_wrapper
 
-_icon_theme = None
+_ICON_THEME = None
 
 def alfred_is_dark():
     # Formatted rgba(255,255,255,0.90)
@@ -13,16 +13,16 @@ def alfred_is_dark():
 
 
 def icon_theme():
-    global _icon_theme
-    if not _icon_theme:
+    global _ICON_THEME
+    if not _ICON_THEME:
         prefs = Preferences.current_prefs()
 
         if prefs.icon_theme:
-            _icon_theme = prefs.icon_theme
+            _ICON_THEME = prefs.icon_theme
         else:
-            _icon_theme = 'light' if alfred_is_dark() else 'dark'
+            _ICON_THEME = 'light' if alfred_is_dark() else 'dark'
 
-    return _icon_theme
+    return _ICON_THEME
 
 _icon_path = f"icons/{icon_theme()}/"
 

@@ -4,7 +4,7 @@ from mstodo.util import wf_wrapper
 
 wf = wf_wrapper()
 
-def filter(args):
+def display(args):
     wf.add_item(
         'Are you sure?',
         'You will need to log in to a Microsoft account to continue using the workflow',

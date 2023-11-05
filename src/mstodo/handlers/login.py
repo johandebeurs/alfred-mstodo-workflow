@@ -8,7 +8,7 @@ from mstodo.util import wf_wrapper
 ACTION_PATTERN = re.compile(r'^\W+', re.UNICODE)
 wf = wf_wrapper()
 
-def filter(args):
+def display(args):
     getting_help = False
 
     if len(args) > 0:

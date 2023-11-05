@@ -83,19 +83,14 @@ def route(args):
 
             handler.commit(command, modifier)
         else:
-            handler.filter(command)
-            # @TODO handle updates
             if wf.update_available:
-                update_data = wf.cached_data('__workflow_update_status', max_age=0)
-
-                if update_data.get('version') != str(wf.settings['__workflow_last_version']):
-                    wf.add_item(
-                        'An update is available!',
-                        f"Update the ToDo workflow from version {wf.settings['__workflow_last_version']} \
-                            to {update_data.get('version')}",
-                        arg='-about update', valid=True, icon=icons.DOWNLOAD
-                    )
-
+                wf.add_item(
+                    'An update is available!',
+                    f"Update the ToDo workflow from version {wf.settings['__workflow_last_version']} \
+to {wf.cached_data('__workflow_latest_version').get('version')}",
+                    arg='-about update', valid=True, icon=icons.DOWNLOAD
+                )
+            handler.display(command)
             wf.send_feedback()
 
     if logged_in:

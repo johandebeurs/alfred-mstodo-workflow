@@ -5,12 +5,12 @@ from dateutil import tz
 
 from mstodo import config
 import mstodo.api.base as api
-from mstodo.util import NullHandler
 
 log = logging.getLogger(__name__)
-log.addHandler(NullHandler())
 
-def _build_querystring(completed=None, dt=None, afterdt=True, fields=[]):
+def _build_querystring(completed=None, dt=None, afterdt=True, fields=None):
+    if fields is None:
+        fields = []
     query = f"?$top={config.MS_TODO_PAGE_SIZE}&count=true&$select= \
         {''.join([field + ',' for field in fields])[:-1]}"
     if (completed is not None or dt is not None):
@@ -27,7 +27,9 @@ def _build_querystring(completed=None, dt=None, afterdt=True, fields=[]):
         query += ''
     return query
 
-def tasks(taskfolder_id=None, completed=None, dt=None, afterdt=None, fields=[]):
+def tasks(taskfolder_id=None, completed=None, dt=None, afterdt=None, fields=None):
+    if fields is None:
+        fields = []
     if taskfolder_id is not None:
         root_uri = f"me/outlook/taskFolders/{taskfolder_id}/tasks"
     else:
@@ -43,12 +45,8 @@ def tasks(taskfolder_id=None, completed=None, dt=None, afterdt=None, fields=[]):
         start_page = time.time()
         req = api.get(next_link)
         task_data.extend(req.json()['value'])
-        log.debug('Retrieved %d %s%stasks in %d seconds' % (
-            len(req.json()['value']),
-            'modified ' if afterdt else '',
-            'completed ' if completed else '',
-            time.time() - start_page
-        ))
+        log.debug(f"Retrieved {len(req.json()['value'])} {'modified ' if afterdt else ''}\
+{'completed ' if completed else ''}tasks in {round(time.time() - start_page, 3)} seconds")
         if '@odata.nextLink' in req.json():
             next_link= req.json()['@odata.nextLink'].replace(f"{config.MS_TODO_API_BASE_URL}/",'')
         else:
@@ -56,8 +54,8 @@ def tasks(taskfolder_id=None, completed=None, dt=None, afterdt=None, fields=[]):
 
     return task_data
 
-def task(id):
-    req = api.get('me/outlook/tasks/' + id)
+def task(_id):
+    req = api.get('me/outlook/tasks/' + _id)
     info = req.json()
 
     return info
@@ -178,25 +176,26 @@ def create_task(taskfolder_id, title, assignee_id=None, recurrence_type=None,
 
     return req
 
-def update_task(id, revision, title=None, assignee_id=None, recurrence_type=None,
+def update_task(_id, revision, title=None, assignee_id=None, recurrence_type=None,
                 recurrence_count=None, due_date=None, reminder_date=None, starred=None,
                 completed=None):
     params = {}
 
-    if completed is True:
-        res = api.post(f"me/outlook/tasks/{id}/complete")
-        return res
-    elif completed is False:
-        params['status'] = 'notStarted'
-        params['completedDateTime'] = {}
+    if not completed is None:
+        if completed:
+            res = api.post(f"me/outlook/tasks/{_id}/complete")
+            return res
+        else:
+            params['status'] = 'notStarted'
+            params['completedDateTime'] = {}
 
     if title is not None:
         params['subject'] = title
 
     if starred is not None:
-        if starred is True: 
+        if starred is True:
             params['importance'] = 'high'
-        elif starred is False: 
+        elif starred is False:
             params['importance'] = 'normal'
 
     if due_date is not None:
@@ -220,13 +219,13 @@ def update_task(id, revision, title=None, assignee_id=None, recurrence_type=None
     # remove = []
 
     if params:
-        res = api.patch(f"me/outlook/tasks/{id}", params)
+        res = api.patch(f"me/outlook/tasks/{_id}", params)
 
         return res
 
     return None
 
-def delete_task(id, revision):
-    res = api.delete(f"me/outlook/tasks/{id}")
+def delete_task(_id, revision):
+    res = api.delete(f"me/outlook/tasks/{_id}")
 
     return res

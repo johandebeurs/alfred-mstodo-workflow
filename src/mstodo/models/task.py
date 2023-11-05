@@ -4,17 +4,16 @@ from datetime import date, timedelta, datetime
 import logging
 import time
 
-from peewee import (BooleanField, CharField, ForeignKeyField, IntegerField, 
-                    PeeweeException, TextField, JOIN)
+from peewee import (BooleanField, CharField, ForeignKeyField, IntegerField,
+                    PeeweeException, TextField)
 
 from mstodo.models.fields import DateTimeUTCField
 from mstodo.models.base import BaseModel
 from mstodo.models.taskfolder import TaskFolder
 from mstodo.models.user import User
-from mstodo.util import short_relative_formatted_date, NullHandler
+from mstodo.util import short_relative_formatted_date, SYMBOLS
 
 log = logging.getLogger(__name__)
-log.addHandler(NullHandler())
 
 _days_by_recurrence_type = {
     'day': 1,
@@ -22,12 +21,6 @@ _days_by_recurrence_type = {
     'month': 30.43,
     'year': 365
 }
-
-_star = '★'
-_overdue_1x = '⚠️'
-_overdue_2x = '❗️'
-_recurrence = '↻'
-_reminder = '⏰'
 
 _primary_api_fields = [
     'id',
@@ -54,6 +47,9 @@ _secondary_api_fields = [
 ]
 
 class Task(BaseModel):
+    """
+    Extends the Base class and refines it for the Task data structure 
+    """
     id = CharField(primary_key=True)
     list = ForeignKeyField(TaskFolder,index=True, related_name='tasks') #@TODO check related name syntax
     createdDateTime = DateTimeUTCField()
@@ -81,7 +77,6 @@ class Task(BaseModel):
     def transform_datamodel(tasks_data):
         for task in tasks_data:
             for (k, v) in task.copy().items():
-                # log.debug(k + ": " + str(v))
                 if k == "subject":
                     task['title'] = v
                 elif k == "parentFolderId":
@@ -96,17 +91,22 @@ class Task(BaseModel):
                     elif k == 'recurrence':
                         # WL uses day, week month year, MSTODO uses
                         # daily weekly absoluteMonthly relativeMonthly a..Yearly r...Yearly
-                        if 'week' in v['pattern']['type'].lower(): window = 'week'
-                        elif 'month' in v['pattern']['type'].lower(): window = 'month'
-                        elif 'year' in v['pattern']['type'].lower(): window = 'year'
-                        elif 'da' in v['pattern']['type'].lower(): window = 'day'
-                        else: window = ''
+                        if 'week' in v['pattern']['type'].lower():
+                            window = 'week'
+                        elif 'month' in v['pattern']['type'].lower():
+                            window = 'month'
+                        elif 'year' in v['pattern']['type'].lower():
+                            window = 'year'
+                        elif 'da' in v['pattern']['type'].lower():
+                            window = 'day'
+                        else:
+                            window = ''
                         task['recurrence_type'] = window
                         task['recurrence_count'] = v['pattern']['interval']
         return tasks_data
 
     @classmethod
-    def sync_all_tasks(cls, background=False):
+    def sync_all_tasks(cls):
         from mstodo.api import tasks
         from concurrent import futures
         start = time.time()
@@ -120,7 +120,7 @@ class Task(BaseModel):
             job = executor.submit(lambda p: tasks.tasks(**p),kwargs)
             tasks_data = job.result()
 
-        log.debug("Retrieved all {} task ids in {} seconds".format(len(tasks_data), round(time.time() - start, 3)))
+        log.debug(f"Retrieved all {len(tasks_data)} task ids in {round(time.time() - start, 3)} seconds")
         start = time.time()
 
         try:
@@ -129,20 +129,19 @@ class Task(BaseModel):
         except PeeweeException:
             pass
 
-        log.debug("Retrieved all {} tasks from database in {} seconds"\
-                 .format(len(instances), round(time.time() - start, 3)))
+        log.debug(f"Retrieved all {len(instances)} tasks from database in {round(time.time() - start, 3)} seconds")
         start = time.time()
 
         tasks_data = cls.transform_datamodel(tasks_data)
         cls._perform_updates(instances, tasks_data)
         cls._sync_children()
 
-        log.debug("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
+        log.debug(f"Completed updates to tasks in {round(time.time() - start, 3)} seconds")
 
         return None
 
     @classmethod
-    def sync_modified_tasks(cls, background=False):
+    def sync_modified_tasks(cls):
         from mstodo.api import tasks
         from concurrent import futures
         from workflow import Workflow
@@ -170,7 +169,6 @@ class Task(BaseModel):
             )
             for job in futures.as_completed(jobs):
                 all_tasks += job.result()
-                # log.debug(job.result())
 
         # if task in modified_tasks then remove from all taskfolder data
         modified_tasks_ids = [task['id'] for task in modified_tasks]
@@ -179,8 +177,8 @@ class Task(BaseModel):
                 all_tasks.remove(task)
         all_tasks.extend(modified_tasks)
 
-        log.debug("Retrieved all {} including {} modifications since {} in {} seconds" \
-                 .format(len(all_tasks), len(modified_tasks), dt, round(time.time() - start, 3)))
+        log.debug(f"Retrieved all {len(all_tasks)} including {len(modified_tasks)}\
+ modifications since {dt} in {round(time.time() - start, 3)} seconds")
         start = time.time()
 
         try:
@@ -189,7 +187,7 @@ class Task(BaseModel):
         except PeeweeException:
             pass
 
-        log.debug("Loaded all {} from database in {} seconds".format(len(instances), round(time.time() - start, 3)))
+        log.debug(f"Loaded all {len(instances)} from database in {round(time.time() - start, 3)} seconds")
         start = time.time()
 
         all_tasks = cls.transform_datamodel(all_tasks)
@@ -197,7 +195,7 @@ class Task(BaseModel):
         # cls._sync_children()
         #FIXME this causes errors, need to refactor
 
-        log.debug("Completed updates to tasks in {} seconds".format(round(time.time() - start, 3)))
+        log.debug(f"Completed updates to tasks in {round(time.time() - start, 3)} seconds")
 
         return None
 
@@ -245,7 +243,7 @@ class Task(BaseModel):
         subtitle = []
 
         if self.importance == 'high':
-            subtitle.append(_star)
+            subtitle.append(SYMBOLS['star'])
 
         # Task is completed
         if self.status == 'completed':
@@ -256,19 +254,19 @@ class Task(BaseModel):
 
         if self.recurrence_type:
             if self.recurrence_count > 1:
-                subtitle.append(f"{_recurrence} Every {self.recurrence_count} {self.recurrence_type}s")
+                subtitle.append(f"{SYMBOLS['recurrence']} Every {self.recurrence_count} {self.recurrence_type}s")
             # Cannot simply add -ly suffix
             elif self.recurrence_type == 'day':
-                subtitle.append(f"{_recurrence} Daily")
+                subtitle.append(f"{SYMBOLS['recurrence']} Daily")
             else:
-                subtitle.append(f"{_recurrence} {self.recurrence_type.title()}ly")
+                subtitle.append(f"{SYMBOLS['recurrence']} {self.recurrence_type.title()}ly")
 
         if self.status != 'completed':
             overdue_times = self.overdue_times
             if overdue_times > 1:
-                subtitle.insert(0, f"{_overdue_2x} {overdue_times}X OVERDUE!")
+                subtitle.insert(0, f"{SYMBOLS['overdue_2x']} {overdue_times}X OVERDUE!")
             elif overdue_times == 1:
-                subtitle.insert(0, f"{_overdue_1x} OVERDUE!")
+                subtitle.insert(0, f"{SYMBOLS['overdue_1x']} OVERDUE!")
 
             if self.reminderDateTime:
                 reminder_date_phrase = None
@@ -278,7 +276,7 @@ class Task(BaseModel):
                 else:
                     reminder_date_phrase = short_relative_formatted_date(self.reminderDateTime)
 
-                subtitle.append(f"{_reminder} {reminder_date_phrase} at \
+                subtitle.append(f"{SYMBOLS['reminder']} {reminder_date_phrase} at \
 {format_time(self.reminderDateTime, 'short')}")
 
         subtitle.append(self.title)
@@ -286,14 +284,19 @@ class Task(BaseModel):
         return '   '.join(subtitle)
 
     def _sync_children(self):
-        from mstodo.models.hashtag import Hashtag
-
-        Hashtag.sync(background=True)
+        pass
+        #@TODO sort out child syncing
+        # from mstodo.models.hashtag import Hashtag
+        # Hashtag.sync()
 
     def __str__(self):
         title = self.title if len(self.title) <= 20 else self.title[:20].rstrip() + '…'
         task_subid = self.id[-32:]
         return f"<{type(self).__name__} ...{task_subid} {title}>"
 
-    class Meta(object):
+    class Meta():
+        """
+        Custom metadata for the Task object
+        """
         order_by = ('lastModifiedDateTime', 'id')
+        expect_revisions = True

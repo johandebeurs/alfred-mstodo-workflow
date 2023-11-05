@@ -4,7 +4,7 @@ from mstodo.util import wf_wrapper
 
 wf = wf_wrapper()
 
-def filter(args):
+def display(args):
     wf.add_item(
         'New in this version',
         'Installed: ' + __version__ + '. See the changes from the previous version',

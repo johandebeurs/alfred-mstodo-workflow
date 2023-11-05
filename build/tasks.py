@@ -12,8 +12,8 @@ def build(c, initial=False):
     subtasks.minify(c)
     subtasks.copy_libs(c, initial=initial)
     subtasks.copy(c)
-    subtasks.symlink(c)
     subtasks.replace(c)
+    subtasks.symlink(c)
     subtasks.package_workflow(c)
     subtasks.package_workflow(c, env="dev")
 

@@ -9,7 +9,7 @@ log = logging.getLogger(__name__)
 def _taskfolder_name(args):
     return ' '.join(args[1:]).strip()
 
-def filter(args):
+def display(args):
     wf = wf_wrapper()
     taskfolder_name = _taskfolder_name(args)
     subtitle = taskfolder_name if taskfolder_name else 'Type the name of the task folder'
@@ -38,4 +38,4 @@ def commit(args, modifier=None):
     elif req.status_code > 400:
         log.debug(str(req.json()['error']['message']))
     else:
-        log.debug('Unknown API error. Please try again')
+        log.debug("Unknown API error. Please try again")

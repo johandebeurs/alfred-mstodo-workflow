@@ -4,13 +4,14 @@ import time
 from peewee import (BooleanField, CharField, PeeweeException)
 
 from mstodo.models.base import BaseModel
-from mstodo.util import wf_wrapper, NullHandler
+from mstodo.util import wf_wrapper
 
 log = logging.getLogger(__name__)
-log.addHandler(NullHandler())
-
 
 class TaskFolder(BaseModel):
+    """
+    Extends the Base class and refines it for the Taskfolder data structure 
+    """
     id = CharField(primary_key=True)
     changeKey = CharField()
     title = CharField(index=True)
@@ -18,15 +19,14 @@ class TaskFolder(BaseModel):
     parentGroupKey = CharField()
 
     @classmethod
-    def sync(cls, background=False):
+    def sync(cls):
         from mstodo.api import taskfolders
         start = time.time()
 
         taskfolders_data = taskfolders.taskfolders()
         instances = []
 
-        log.debug("Retrieved all {} task folders in {} seconds"\
-                 .format(len(taskfolders_data), round(time.time() - start, 3)))
+        log.debug(f"Retrieved all {len(taskfolders_data)} taskfolders in {round(time.time() - start, 3)} seconds")
         start = time.time()
 
         # Hacky translation of mstodo data model to wunderlist data model
@@ -43,8 +43,8 @@ class TaskFolder(BaseModel):
         except PeeweeException:
             pass
 
-        log.debug("Loaded all {} task folders from the database in {} seconds"\
-                 .format(len(instances), round(time.time() - start, 3)))
+        log.debug(f"Loaded all {len(instances)} taskfolders from \
+the database in {round(time.time() - start, 3)} seconds")
 
         return cls._perform_updates(instances, taskfolders_data)
 
@@ -66,5 +66,9 @@ class TaskFolder(BaseModel):
         # Task.sync_tasks_in_taskfolder(self)
 
     class Meta:
+        """
+        Custom metadata for the Taskfolder object
+        """
         order_by = ('changeKey', 'id')
         has_children = False
+        expect_revisions = True

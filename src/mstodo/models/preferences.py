@@ -1,6 +1,6 @@
 from datetime import time, timedelta
 
-from mstodo.util import wf_wrapper
+from workflow import Workflow
 
 DEFAULT_TASKFOLDER_MOST_RECENT = 'most_recent'
 
@@ -19,32 +19,15 @@ UPCOMING_DURATION_KEY = 'upcoming_duration'
 COMPLETED_DURATION_KEY = 'completed_duration'
 DATE_LOCALE_KEY = 'date_locale'
 
-wf = wf_wrapper()
+# Using a new object to avoid cyclic imports between mstodo.util and this file
+wf = Workflow()
 
-class Preferences(object):
+class Preferences():
+    """
+    Holds and modifies preferences for the MS ToDo alfred workflow
+    """
 
     _current_prefs = None
-
-    @classmethod
-    def sync(cls):
-        #@TODO check this logic. There is no settings module?
-        from mstodo.api import settings
-
-        prefs = cls.current_prefs()
-
-        # Only set the default values once, otherwise allow them to be managed
-        # in the workflow
-        if prefs._get(AUTOMATIC_REMINDERS_KEY, None) is None:
-            prefs.reminder_today_offset = time(1, 0, 0)
-
-            for s in settings.settings():
-                if s['key'] == 'automatic_reminders':
-                    # In case the value, currently "on" or "off" is changed to
-                    # boolean this logic will still work
-                    prefs.automatic_reminders = s['value'] and s['value'] != 'off'
-                    break
-
-        return False
 
     @classmethod
     def current_prefs(cls):
@@ -75,7 +58,7 @@ class Preferences(object):
 
         wf.store_data('prefs', self._data)
 
-    def _get(self, key, default=None, type=str):
+    def _get(self, key, default=None):
         value = self._data.get(key)
 
         if value is None and default is not None:
@@ -176,7 +159,7 @@ class Preferences(object):
     @upcoming_duration.setter
     def upcoming_duration(self, upcoming_duration):
         self._set(UPCOMING_DURATION_KEY, upcoming_duration)
-  
+
     @property
     def completed_duration(self):
         return self._get(COMPLETED_DURATION_KEY, 1)
