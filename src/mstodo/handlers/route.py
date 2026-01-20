@@ -38,9 +38,12 @@ def route(args):
     if 'about'.find(action) == 0:
         from mstodo.handlers import about
         handler = about
-    elif not logged_in:
+    elif not logged_in or 'login'.find(action) == 0:
         from mstodo.handlers import login
         handler = login
+    elif 'login_renew'.find(action) == 0:
+        from mstodo.handlers import login_reset
+        handler = login_reset
     elif 'folder'.find(action) == 0:
         from mstodo.handlers import taskfolder
         handler = taskfolder

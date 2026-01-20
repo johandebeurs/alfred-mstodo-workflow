@@ -41,6 +41,35 @@ def _format_time_offset(dt):
 def display(args):
     prefs = Preferences.current_prefs()
 
+    # first, check current login by trying to retrieve task folders
+    # (is_logged_in doesn't seem to be working)
+    current_user = None
+    taskfolders = wf.stored_data('taskfolders')
+
+    try:
+        current_user = User.get()
+    except User.DoesNotExist:
+        pass
+    except OperationalError:
+        from mstodo.sync import background_sync
+        background_sync()
+
+    if current_user is None:
+        wf.add_item(
+            'Reset login',
+            f"Failed to retrieve user data. Are you logged in?",
+            arg='-login_renew --commit', icon=icons.ACCOUNT
+        )
+        return
+
+    if  taskfolders is None:
+        wf.add_item(
+            'Renew login',
+            f"Failed to retrieve task folders. Are you logged in?",
+            arg='-login_renew --commit', icon=icons.ACCOUNT
+        )
+        return
+
     if 'reminder' in args:
         reminder_time = _parse_time(' '.join(args))
 
@@ -61,7 +90,9 @@ def display(args):
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
-    elif 'reminder_today' in args:
+        return
+
+    if 'reminder_today' in args:
         reminder_today_offset = _parse_time(' '.join(args))
 
         if reminder_today_offset is not None:
@@ -103,7 +134,9 @@ def display(args):
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
-    elif 'default_folder' in args:
+        return
+
+    if 'default_folder' in args:
         taskfolders = wf.stored_data('taskfolders')
         matching_taskfolders = taskfolders
 
@@ -137,111 +170,102 @@ def display(args):
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
+        return
+
+    loc = user_locale()
+    default_folder_name = 'Tasks'
+
+    if prefs.default_taskfolder_id == DEFAULT_TASKFOLDER_MOST_RECENT:
+        default_folder_name = 'Most recent folder'
     else:
-        current_user = None
-        taskfolders = wf.stored_data('taskfolders')
-        loc = user_locale()
-        default_folder_name = 'Tasks'
-
-        try:
-            current_user = User.get()
-        except User.DoesNotExist:
-            pass
-        except OperationalError:
-            from mstodo.sync import background_sync
-            background_sync()
-
-        if prefs.default_taskfolder_id == DEFAULT_TASKFOLDER_MOST_RECENT:
-            default_folder_name = 'Most recent folder'
-        else:
-            default_taskfolder_id = prefs.default_taskfolder_id
-            default_folder_name = next(
-                (f['title'] for f in taskfolders if f['id'] == default_taskfolder_id),
-                'Tasks'
-            )
-
-        if current_user and current_user.userPrincipalName:
-            #@TODO double check this handling if the user schema changes on move to new APIs
-            wf.add_item(
-                'Sign out',
-                f"You are logged in as {current_user.userPrincipalName}",
-                autocomplete='-logout', icon=icons.CANCEL
-            )
-
-        wf.add_item(
-            'Show completed tasks',
-            'Includes completed tasks in search results',
-            arg='-pref show_completed_tasks', valid=True,
-            icon=icons.TASK_COMPLETED if prefs.show_completed_tasks else icons.TASK
+        default_taskfolder_id = prefs.default_taskfolder_id
+        default_folder_name = next(
+            (f['title'] for f in taskfolders if f['id'] == default_taskfolder_id),
+            'Tasks'
         )
 
+    if current_user and current_user.userPrincipalName:
+        #@TODO double check this handling if the user schema changes on move to new APIs
         wf.add_item(
-            'Default reminder time',
-            f"{SYMBOLS['reminder']} {format_time(prefs.reminder_time, 'short')}      Reminders without a specific time \
+            'Sign out',
+            f"You are logged in as {current_user.userPrincipalName}",
+            autocomplete='-logout', icon=icons.CANCEL
+        )
+
+    wf.add_item(
+        'Show completed tasks',
+        'Includes completed tasks in search results',
+        arg='-pref show_completed_tasks', valid=True,
+        icon=icons.TASK_COMPLETED if prefs.show_completed_tasks else icons.TASK
+    )
+
+    wf.add_item(
+        'Default reminder time',
+        f"{SYMBOLS['reminder']} {format_time(prefs.reminder_time, 'short')}      Reminders without a specific time \
 will be set to this time",
-            autocomplete='-pref reminder ', icon=icons.REMINDER
-        )
+        autocomplete='-pref reminder ', icon=icons.REMINDER
+    )
 
-        wf.add_item(
-            'Default reminder when due today',
-            f"""{SYMBOLS['reminder']} {_format_time_offset(prefs.reminder_today_offset)}      Default reminder time \
+    wf.add_item(
+        'Default reminder when due today',
+        f"""{SYMBOLS['reminder']} {_format_time_offset(prefs.reminder_today_offset)}      Default reminder time \
 for tasks due today is {'relative to the current time' if prefs.reminder_today_offset else f"always {format_time(prefs.reminder_time, 'short')}"}""",
-            autocomplete='-pref reminder_today ', icon=icons.REMINDER
-        )
+        autocomplete='-pref reminder_today ', icon=icons.REMINDER
+    )
 
+    wf.add_item(
+        'Default folder',
+        f"{default_folder_name}      Change the default folder when creating new tasks",
+        autocomplete='-pref default_folder ', icon=icons.LIST
+    )
+
+    wf.add_item(
+        'Automatically set a reminder on the due date',
+        'Sets a default reminder for tasks with a due date.',
+        arg='-pref automatic_reminders', valid=True,
+        icon=icons.TASK_COMPLETED if prefs.automatic_reminders else icons.TASK
+    )
+
+    if loc != 'en_US' or prefs.date_locale:
         wf.add_item(
-            'Default folder',
-            f"{default_folder_name}      Change the default folder when creating new tasks",
-            autocomplete='-pref default_folder ', icon=icons.LIST
+            'Force US English for dates',
+            f"Rather than the current locale ({loc})",
+            arg='-pref force_en_US', valid=True,
+            icon=icons.TASK_COMPLETED if prefs.date_locale == 'en_US' else icons.TASK
         )
 
-        wf.add_item(
-            'Automatically set a reminder on the due date',
-            'Sets a default reminder for tasks with a due date.',
-            arg='-pref automatic_reminders', valid=True,
-            icon=icons.TASK_COMPLETED if prefs.automatic_reminders else icons.TASK
-        )
+    wf.add_item(
+        'Require explicit due keyword',
+        'Requires the due keyword to avoid accidental due date extraction',
+        arg='-pref explicit_keywords', valid=True,
+        icon=icons.TASK_COMPLETED if prefs.explicit_keywords else icons.TASK
+    )
 
-        if loc != 'en_US' or prefs.date_locale:
-            wf.add_item(
-                'Force US English for dates',
-                f"Rather than the current locale ({loc})",
-                arg='-pref force_en_US', valid=True,
-                icon=icons.TASK_COMPLETED if prefs.date_locale == 'en_US' else icons.TASK
-            )
+    wf.add_item(
+        'Check for experimental updates to this workflow',
+        'The workflow automatically checks for updates; enable this to include pre-releases',
+        arg=':pref prerelease_channel', valid=True,
+        icon=icons.TASK_COMPLETED if prefs.prerelease_channel else icons.TASK
+    )
 
-        wf.add_item(
-            'Require explicit due keyword',
-            'Requires the due keyword to avoid accidental due date extraction',
-            arg='-pref explicit_keywords', valid=True,
-            icon=icons.TASK_COMPLETED if prefs.explicit_keywords else icons.TASK
-        )
+    wf.add_item(
+        'Force sync',
+        'The workflow syncs automatically, but feel free to be forcible.',
+        arg='-pref sync', valid=True, icon=icons.SYNC
+    )
 
-        wf.add_item(
-            'Check for experimental updates to this workflow',
-            'The workflow automatically checks for updates; enable this to include pre-releases',
-            arg=':pref prerelease_channel', valid=True,
-            icon=icons.TASK_COMPLETED if prefs.prerelease_channel else icons.TASK
-        )
+    wf.add_item(
+        'Switch theme',
+        'Toggle between light and dark icons',
+        arg='-pref retheme',
+        valid=True,
+        icon=icons.PAINTBRUSH
+    )
 
-        wf.add_item(
-            'Force sync',
-            'The workflow syncs automatically, but feel free to be forcible.',
-            arg='-pref sync', valid=True, icon=icons.SYNC
-        )
-
-        wf.add_item(
-            'Switch theme',
-            'Toggle between light and dark icons',
-            arg='-pref retheme',
-            valid=True,
-            icon=icons.PAINTBRUSH
-        )
-
-        wf.add_item(
-            'Main menu',
-            autocomplete='', icon=icons.BACK
-        )
+    wf.add_item(
+        'Main menu',
+        autocomplete='', icon=icons.BACK
+    )
 
 def commit(args, modifier=None):
     prefs = Preferences.current_prefs()
