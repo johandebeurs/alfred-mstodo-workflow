@@ -3,7 +3,8 @@ from datetime import date, datetime, timedelta
 
 from workflow import MATCH_ALL, MATCH_ALLCHARS
 
-from mstodo.models.preferences import Preferences, DEFAULT_TASKFOLDER_MOST_RECENT
+from mstodo.models.preferences import Preferences, DEFAULT_LIST_MOST_RECENT
+from mstodo.models.task_list import TaskList
 from mstodo.util import parsedatetime_calendar, wf_wrapper
 
 # Up to 8 words (sheesh!) followed by a colon
@@ -70,7 +71,6 @@ class TaskParser():
     recurrence_count = None
     reminder_date = None
     hashtag_prompt = None
-    assignee_id = None
     starred = False
     completed = False
     note = None
@@ -97,7 +97,7 @@ class TaskParser():
         phrase = self.phrase
         cal = parsedatetime_calendar()
         wf = wf_wrapper()
-        taskfolders = wf.stored_data('taskfolders')
+        task_lists = TaskList.select()
         prefs = Preferences.current_prefs()
         ignore_due_date = False
 
@@ -125,20 +125,20 @@ class TaskParser():
             phrase = phrase[:match.start()] + phrase[match.end():]
 
         match = re.search(LIST_TITLE_PATTERN, phrase)
-        if taskfolders and match:
+        if task_lists and match:
             if match.group(1):
-                matching_taskfolders = wf.filter(
+                matching_task_lists = wf.filter(
                     match.group(1),
-                    taskfolders,
-                    lambda l: l['title'],
+                    task_lists,
+                    lambda l: l.title,
                     # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                     match_on=MATCH_ALL ^ MATCH_ALLCHARS
                 )
 
                 # Take the first match as the desired list
-                if matching_taskfolders:
-                    self.list_id = matching_taskfolders[0]['id']
-                    self.list_title = matching_taskfolders[0]['title']
+                if matching_task_lists:
+                    self.list_id = matching_task_lists[0].id
+                    self.list_title = matching_task_lists[0].title
             # The list name was empty
             else:
                 self.has_list_prompt = True
@@ -327,44 +327,46 @@ class TaskParser():
                 # Just a couple characters are too likely to result in a false
                 # positive, but allow it if the letters are capitalized
                 if len(subphrase) > 2 or subphrase == subphrase.upper():
-                    matching_taskfolders = wf.filter(
+                    matching_task_lists = wf.filter(
                         subphrase,
-                        taskfolders,
-                        lambda f: f['title'],
+                        task_lists,
+                        lambda f: f.title,
                         # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                         match_on=MATCH_ALL ^ MATCH_ALLCHARS
                     )
 
                     # Take the first match as the desired list
-                    if matching_taskfolders:
-                        self.list_id = matching_taskfolders[0]['id']
-                        self.list_title = matching_taskfolders[0]['title']
+                    if matching_task_lists:
+                        self.list_id = matching_task_lists[0].id
+                        self.list_title = matching_task_lists[0].title
                         self._list_phrase = match.group() + subphrase
                         phrase = phrase[:match.start()]
                         break
 
         # No list parsed, assign to Tasks
         if not self.list_title:
-            if prefs.default_taskfolder_id and taskfolders:
-                if prefs.default_taskfolder_id == DEFAULT_TASKFOLDER_MOST_RECENT:
-                    self.list_id = prefs.last_taskfolder_id
+            if prefs.default_task_list_id and task_lists:
+                if prefs.default_task_list_id == DEFAULT_LIST_MOST_RECENT:
+                    self.list_id = prefs.last_task_list_id
                 else:
-                    self.list_id = prefs.default_taskfolder_id
-                default_taskfolder = next((f for f in taskfolders if f['id'] == self.list_id), None)
-                if default_taskfolder:
-                    self.list_title = default_taskfolder['title']
+                    self.list_id = prefs.default_task_list_id
+                default_task_list = next((f for f in task_lists if f.id == self.list_id), None)
+                if default_task_list:
+                    self.list_title = default_task_list.title
 
             if not self.list_title:
-                if taskfolders:
-                    inbox = taskfolders[0]
-                    self.list_id = inbox['id']
-                    self.list_title = inbox['title']
+                if task_lists:
+                    # Find the list with wellknownListName='defaultList', fall back to first list
+                    inbox = next(
+                        (f for f in task_lists if f.wellknownListName == 'defaultList'),
+                        task_lists[0]
+                    )
+                    self.list_id = inbox.id
+                    self.list_title = inbox.title
                 else:
-                    self.list_id = 0
-                    self.list_title = 'Tasks'
+                    raise ValueError('No task lists available. Please conduct a full sync first.')
 
-        # Set an automatic reminder when there is a due date without a
-        # specified reminder
+        # Set an automatic reminder when there is a due date without a specified reminder
         if self.due_date and not self.reminder_date and prefs.automatic_reminders:
             self.reminder_date = cls.reminder_date_combine(self.due_date)
 

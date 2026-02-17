@@ -21,7 +21,7 @@ class Hashtag(BaseModel):
     def sync(cls):
         from mstodo.models.task import Task
 
-        tasks_with_hashtags = Task.select().where(Task.title.contains('#'))
+        tasks_with_hashtags = list(Task.select().where(Task.title.contains('#')))
         hashtags = {}
 
         for task in tasks_with_hashtags:

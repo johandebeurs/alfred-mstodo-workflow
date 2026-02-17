@@ -22,7 +22,6 @@ class User(BaseModel):
     jobTitle = TextField(null=True)
     officeLocation = TextField(null=True)
     preferredLanguage = TextField(null=True)
-    # businessPhones": [],
 
     @classmethod
     def sync(cls):
@@ -31,7 +30,7 @@ class User(BaseModel):
         start = time.time()
         instance = None
         user_data = user.user()
-        log.debug(f"Retrieved User in {round(time.time() - start, 3)}")
+        log.info(f"Retrieved User in {round(time.time() - start, 3)}")
 
         try:
             instance = cls.get()

@@ -1,7 +1,22 @@
+from typing import List
+
 from mstodo import icons
 from mstodo.util import wf_wrapper
 
-def display(args):
+
+def display(args: List[str]) -> None: # pylint: disable=W0613
+    """Display the main welcome menu for the workflow.
+
+    Shows the primary navigation options including new task creation,
+    due tasks, upcoming tasks, completed tasks, search, new list,
+    preferences, and about.
+
+    Args:
+        args: List of command-line arguments from Alfred.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+    """
     wf = wf_wrapper()
     wf.add_item(
         'New task...',
@@ -33,14 +48,14 @@ def display(args):
 
     wf.add_item(
         'Find and update tasks',
-        'Search or browse by folder',
+        'Search or browse by list',
         autocomplete='-search ',
         icon=icons.SEARCH
     )
 
     wf.add_item(
-        'New folder',
-        autocomplete='-folder ',
+        'New list',
+        autocomplete='-list ',
         icon=icons.LIST_NEW
     )
 

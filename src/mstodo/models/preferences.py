@@ -2,15 +2,15 @@ from datetime import time, timedelta
 
 from workflow import Workflow
 
-DEFAULT_TASKFOLDER_MOST_RECENT = 'most_recent'
+DEFAULT_LIST_MOST_RECENT = 'most_recent'
 
 AUTOMATIC_REMINDERS_KEY = 'automatic_reminders'
-DEFAULT_TASKFOLDER_ID_KEY = 'default_taskfolder_id'
+DEFAULT_LIST_ID_KEY = 'default_task_list_id'
 DUE_ORDER_KEY = 'due_order'
 EXPLICIT_KEYWORDS_KEY = 'explicit_keywords'
 HOIST_SKIPPED_TASKS_KEY = 'hoist_skipped_tasks'
 ICON_THEME_KEY = 'icon_theme'
-LAST_TASKFOLDER_ID_KEY = 'last_taskfolder_id'
+LAST_LIST_ID_KEY = 'last_task_list_id'
 PRERELEASES_KEY = '__workflow_prereleases'
 REMINDER_TIME_KEY = 'reminder_time'
 REMINDER_TODAY_OFFSET_KEY = 'reminder_today_offset'
@@ -121,16 +121,16 @@ class Preferences():
         wf.settings[PRERELEASES_KEY] = prerelease_channel
 
     @property
-    def last_taskfolder_id(self):
-        return self._get(LAST_TASKFOLDER_ID_KEY, None)
+    def last_task_list_id(self):
+        return self._get(LAST_LIST_ID_KEY, None)
 
-    @last_taskfolder_id.setter
-    def last_taskfolder_id(self, last_taskfolder_id):
-        self._set(LAST_TASKFOLDER_ID_KEY, last_taskfolder_id)
+    @last_task_list_id.setter
+    def last_task_list_id(self, last_task_list_id):
+        self._set(LAST_LIST_ID_KEY, last_task_list_id)
 
     @property
     def due_order(self):
-        return self._get(DUE_ORDER_KEY, ['order', 'due_date', 'taskfolder.order'])
+        return self._get(DUE_ORDER_KEY, ['order', 'due_date', 'task_list.order'])
 
     @due_order.setter
     def due_order(self, due_order):
@@ -169,12 +169,12 @@ class Preferences():
         self._set(COMPLETED_DURATION_KEY, completed_duration)
 
     @property
-    def default_taskfolder_id(self):
-        return self._get(DEFAULT_TASKFOLDER_ID_KEY, None)
+    def default_task_list_id(self):
+        return self._get(DEFAULT_LIST_ID_KEY, None)
 
-    @default_taskfolder_id.setter
-    def default_taskfolder_id(self, default_taskfolder_id):
-        self._set(DEFAULT_TASKFOLDER_ID_KEY, default_taskfolder_id)
+    @default_task_list_id.setter
+    def default_task_list_id(self, default_task_list_id):
+        self._set(DEFAULT_LIST_ID_KEY, default_task_list_id)
 
     @property
     def date_locale(self):

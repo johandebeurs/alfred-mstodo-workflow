@@ -2,28 +2,29 @@
 
 from datetime import datetime, timedelta
 import logging
+from typing import List, Optional
 
 from peewee import OperationalError
 
 from mstodo import icons
-from mstodo.models.taskfolder import TaskFolder
+from mstodo.models.task_list import TaskList
 from mstodo.models.preferences import Preferences
 from mstodo.models.task import Task
-from mstodo.sync import background_sync, background_sync_if_necessary
+from mstodo.sync import background_sync
 from mstodo.util import relaunch_alfred, wf_wrapper
 
-log = logging.getLogger('mstodo')
+log = logging.getLogger(__name__)
 
 _due_orders = (
     {
-        'due_order': ['order', 'due_date', 'TaskFolder.id'],
-        'title': 'Most overdue within each folder',
-        'subtitle': 'Sort tasks by increasing due date within folders (Default)'
+        'due_order': ['order', 'due_date', 'TaskList.id'],
+        'title': 'Most overdue within each list',
+        'subtitle': 'Sort tasks by increasing due date within lists (Default)'
     },
     {
-        'due_order': ['order', '-due_date', 'TaskFolder.id'],
-        'title': 'Most recently due within each folder',
-        'subtitle': 'Sort tasks by decreasing due date within folders'
+        'due_order': ['order', '-due_date', 'TaskList.id'],
+        'title': 'Most recently due within each list',
+        'subtitle': 'Sort tasks by decreasing due date within lists'
     },
     {
         'due_order': ['order', 'due_date'],
@@ -38,7 +39,21 @@ _due_orders = (
 )
 
 
-def display(args):
+def display(args: List[str]) -> None:
+    """Display due and overdue tasks with sorting options.
+
+    Shows tasks that are due today or overdue. Can also display sort order
+    selection menu when 'sort' subcommand is used.
+
+    Args:
+        args: List of command-line arguments from Alfred. May include
+            'sort' subcommand and optional search terms.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+        - Triggers background sync.
+        - May trigger additional sync if database error occurs.
+    """
     wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     command = args[1] if len(args) > 1 else None
@@ -58,18 +73,18 @@ def display(args):
 
         return
 
-    background_sync_if_necessary()
+    background_sync()
     conditions = True
 
     # Build task title query based on the args
     for arg in args[1:]:
         if len(arg) > 1:
-            conditions = conditions & (Task.title.contains(arg) | TaskFolder.title.contains(arg))
+            conditions = conditions & (Task.title.contains(arg) | TaskList.title.contains(arg))
 
     if conditions is None:
         conditions = True
 
-    tasks = Task.select().join(TaskFolder).where(
+    tasks = Task.select().join(TaskList).where(
         (Task.status != 'completed') &
         (Task.dueDateTime < datetime.now() + timedelta(days=1)) &
         Task.list.is_null(False) &
@@ -86,8 +101,8 @@ def display(args):
 
         if key == 'due_date':
             field = Task.dueDateTime
-        elif key == 'taskfolder.id':
-            field = TaskFolder.id
+        elif key == 'task_list.id':
+            field = TaskList.id
         elif key == 'order':
             field = Task.lastModifiedDateTime
 
@@ -117,7 +132,19 @@ def display(args):
 
     wf.add_item('Main menu', autocomplete='', icon=icons.BACK)
 
-def commit(args, modifier=None):
+def commit(args: List[str], modifier: Optional[str] = None) -> None: # pylint: disable=W0613
+    """Execute due tasks actions, primarily sort order changes.
+
+    Args:
+        args: List of command-line arguments. Expected format includes
+            action type (e.g., 'sort') and optional value.
+        modifier: Optional modifier key (alt, cmd, ctrl, fn) pressed during action.
+
+    Side effects:
+        - Updates user preferences for due task sort order.
+        - May toggle hoist_skipped_tasks preference.
+        - Relaunches Alfred with updated view.
+    """
     action = args[1]
     prefs = Preferences.current_prefs()
     relaunch_command = None

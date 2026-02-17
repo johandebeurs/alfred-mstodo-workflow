@@ -1,19 +1,32 @@
 # encoding: utf-8
+from datetime import date, time
+from typing import List, Optional
+
 from peewee import OperationalError
 
 from workflow import MATCH_ALL, MATCH_ALLCHARS
 from workflow.notify import notify
 
 from mstodo import icons
-from mstodo.models.preferences import Preferences, DEFAULT_TASKFOLDER_MOST_RECENT
+from mstodo.models.preferences import Preferences, DEFAULT_LIST_MOST_RECENT
 from mstodo.models.user import User
+from mstodo.models.task_list import TaskList
 from mstodo.util import format_time, parsedatetime_calendar, relaunch_alfred, user_locale, wf_wrapper, SYMBOLS
 
 wf = wf_wrapper()
 
-def _parse_time(phrase):
-    from datetime import date, time
 
+def _parse_time(phrase: str) -> Optional[time]:
+    """Parse a natural language time phrase into a time object.
+
+    Uses parsedatetime to interpret phrases like "9am", "noon", "3:30 PM".
+
+    Args:
+        phrase: A string containing a time expression.
+
+    Returns:
+        A datetime.time object if parsing succeeds, None otherwise.
+    """
     cal = parsedatetime_calendar()
 
     # Use a sourceTime so that time expressions are relative to 00:00:00
@@ -25,7 +38,18 @@ def _parse_time(phrase):
         return time(*datetime_info[0][3:5])
     return None
 
-def _format_time_offset(dt):
+
+def _format_time_offset(dt: Optional[time]) -> str:
+    """Format a time object as a duration offset string.
+
+    Converts a time object into a human-readable offset like "1h 30m".
+
+    Args:
+        dt: A datetime.time object representing the offset, or None.
+
+    Returns:
+        A formatted string like "1h 30m", or "disabled" if dt is None.
+    """
     if dt is None:
         return 'disabled'
 
@@ -38,7 +62,24 @@ def _format_time_offset(dt):
 
     return ' '.join(offset)
 
-def display(args):
+
+def display(args: List[str]) -> None:
+    """Display preferences menu with various workflow settings.
+
+    Shows different preference screens based on arguments:
+    - reminder: Default reminder time setting
+    - reminder_today: Reminder offset for same-day tasks
+    - default_list: Default list selection
+    - Main preferences menu otherwise
+
+    Args:
+        args: List of command-line arguments from Alfred specifying
+            which preference section to display.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+        - May trigger background sync if database error occurs.
+    """
     prefs = Preferences.current_prefs()
 
     if 'reminder' in args:
@@ -103,33 +144,33 @@ def display(args):
             'Cancel',
             autocomplete='-pref', icon=icons.BACK
         )
-    elif 'default_folder' in args:
-        taskfolders = wf.stored_data('taskfolders')
-        matching_taskfolders = taskfolders
+    elif 'default_list' in args:
+        task_lists = TaskList.select()
+        matching_task_lists = task_lists
 
         if len(args) > 2:
-            taskfolder_query = ' '.join(args[2:])
-            if taskfolder_query:
-                matching_taskfolders = wf.filter(
-                    taskfolder_query,
-                    taskfolders,
-                    lambda f: f['title'],
+            task_list_query = ' '.join(args[2:])
+            if task_list_query:
+                matching_task_lists = wf.filter(
+                    task_list_query,
+                    task_lists,
+                    lambda f: f.title,
                     # Ignore MATCH_ALLCHARS which is expensive and inaccurate
                     match_on=MATCH_ALL ^ MATCH_ALLCHARS
                 )
 
-        for i, f in enumerate(matching_taskfolders):
+        for i, f in enumerate(matching_task_lists):
             if i == 1:
                 wf.add_item(
-                    'Most recently used folder',
-                    'Default to the last folder to which a task was added',
-                    arg=f"-pref default_folder {DEFAULT_TASKFOLDER_MOST_RECENT}",
+                    'Most recently used list',
+                    'Default to the last list to which a task was added',
+                    arg=f"-pref default_list {DEFAULT_LIST_MOST_RECENT}",
                     valid=True, icon=icons.RECURRENCE
                 )
-            icon = icons.INBOX if f['isDefaultFolder'] else icons.LIST
+            icon = icons.INBOX if f.wellknownListName == 'defaultList' else icons.LIST
             wf.add_item(
-                f['title'],
-                arg=f"-pref default_folder {f['id']}",
+                f.title,
+                arg=f"-pref default_list {f.id}",
                 valid=True, icon=icon
             )
 
@@ -139,9 +180,9 @@ def display(args):
         )
     else:
         current_user = None
-        taskfolders = wf.stored_data('taskfolders')
+        task_lists = TaskList.select()
         loc = user_locale()
-        default_folder_name = 'Tasks'
+        default_list_name = 'Tasks' #@TODO refactor to select based on wellKnownListName
 
         try:
             current_user = User.get()
@@ -151,17 +192,16 @@ def display(args):
             from mstodo.sync import background_sync
             background_sync()
 
-        if prefs.default_taskfolder_id == DEFAULT_TASKFOLDER_MOST_RECENT:
-            default_folder_name = 'Most recent folder'
+        if prefs.default_task_list_id == DEFAULT_LIST_MOST_RECENT:
+            default_list_name = 'Most recent list'
         else:
-            default_taskfolder_id = prefs.default_taskfolder_id
-            default_folder_name = next(
-                (f['title'] for f in taskfolders if f['id'] == default_taskfolder_id),
+            default_task_list_id = prefs.default_task_list_id
+            default_list_name = next(
+                (f.title for f in task_lists if f.id == default_task_list_id),
                 'Tasks'
             )
 
         if current_user and current_user.userPrincipalName:
-            #@TODO double check this handling if the user schema changes on move to new APIs
             wf.add_item(
                 'Sign out',
                 f"You are logged in as {current_user.userPrincipalName}",
@@ -182,17 +222,21 @@ will be set to this time",
             autocomplete='-pref reminder ', icon=icons.REMINDER
         )
 
+        if prefs.reminder_today_offset:
+            reminder_desc = 'relative to the current time'
+        else:
+            reminder_desc = f"always {format_time(prefs.reminder_time, 'short')}"
         wf.add_item(
             'Default reminder when due today',
-            f"""{SYMBOLS['reminder']} {_format_time_offset(prefs.reminder_today_offset)}      Default reminder time \
-for tasks due today is {'relative to the current time' if prefs.reminder_today_offset else f"always {format_time(prefs.reminder_time, 'short')}"}""",
+            f"{SYMBOLS['reminder']} {_format_time_offset(prefs.reminder_today_offset)}      "
+            f"Default reminder time for tasks due today is {reminder_desc}",
             autocomplete='-pref reminder_today ', icon=icons.REMINDER
         )
 
         wf.add_item(
-            'Default folder',
-            f"{default_folder_name}      Change the default folder when creating new tasks",
-            autocomplete='-pref default_folder ', icon=icons.LIST
+            'Default list',
+            f"{default_list_name}      Change the default list when creating new tasks",
+            autocomplete='-pref default_list ', icon=icons.LIST
         )
 
         wf.add_item(
@@ -243,14 +287,32 @@ for tasks due today is {'relative to the current time' if prefs.reminder_today_o
             autocomplete='', icon=icons.BACK
         )
 
-def commit(args, modifier=None):
+def commit(args: List[str], modifier: Optional[str] = None) -> None: # pylint: disable=W0613
+    """Execute preference changes based on provided arguments.
+
+    Handles various preference updates including sync, completed task
+    visibility, default list, explicit keywords, reminder time, automatic
+    reminders, theme, prerelease channel, and locale settings.
+
+    Args:
+        args: List of command-line arguments specifying the preference
+            to change and its new value.
+        modifier: Optional modifier key (alt, cmd, ctrl, fn) pressed during action.
+
+    Side effects:
+        - Updates user preferences in the database.
+        - May trigger sync operation.
+        - Sends notifications about preference changes.
+        - Relaunches Alfred to reflect changes.
+    """
     prefs = Preferences.current_prefs()
     relaunch_command = '-pref'
     if '--alfred' in args:
         relaunch_command = ' '.join(args[args.index('--alfred') + 1:])
     if 'sync' in args:
         from mstodo.sync import sync
-        sync(background='background' in args)
+        background = any(['background' in x for x in args])
+        sync(background=background)
         relaunch_command = None
     elif 'show_completed_tasks' in args:
         prefs.show_completed_tasks = not prefs.show_completed_tasks
@@ -265,25 +327,25 @@ def commit(args, modifier=None):
                 title='Preferences changed',
                 message='Completed tasks will not be visible in the workflow'
             )
-    elif 'default_folder' in args:
-        default_taskfolder_id = None
-        taskfolders = wf.stored_data('taskfolders')
+    elif 'default_list' in args:
+        default_task_list_id = None
+        task_lists = TaskList.select()
         if len(args) > 2:
-            default_taskfolder_id = args[2]
-        prefs.default_taskfolder_id = default_taskfolder_id
-        if default_taskfolder_id:
-            default_folder_name = next(
-                (f['title'] for f in taskfolders if f['id'] == default_taskfolder_id),
+            default_task_list_id = args[2]
+        prefs.default_task_list_id = default_task_list_id
+        if default_task_list_id:
+            default_list_name = next(
+                (f.title for f in task_lists if f.id == default_task_list_id),
                 'most recent'
             )
             notify(
                 title='Preferences changed',
-                message=f"Tasks will be added to your {default_folder_name} folder by default"
+                message=f"Tasks will be added to your {default_list_name} list by default"
             )
         else:
             notify(
                 title='Preferences changed',
-                message='Tasks will be added to the Tasks folder by default'
+                message='Tasks will be added to the Tasks list by default'
             )
     elif 'explicit_keywords' in args:
         prefs.explicit_keywords = not prefs.explicit_keywords

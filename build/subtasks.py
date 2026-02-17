@@ -1,17 +1,48 @@
 import paths
 import os, sys
 import glob
+import tomllib
 from invoke import task
 
-sys.path.append(os.path.join(sys.path[0],'../src')) # enables imports from src/__init__.py. @TODO see if this can be improved
+def get_metadata_from_pyproject():
+    """Extract all metadata from pyproject.toml
+
+    Returns:
+        dict: Dictionary containing all metadata fields
+    """
+    pyproject_path = os.path.join(os.path.dirname(__file__), '../pyproject.toml')
+    with open(pyproject_path, 'rb') as f:
+        data = tomllib.load(f)
+
+    project = data['project']
+    tool_metadata = data.get('tool', {}).get('alfred-mstodo', {})
+
+    # Extract authors as comma-separated string
+    authors = ', '.join(author.get('name', '') for author in project.get('authors', []))
+
+    # Extract github slug from repository URL
+    repo_url = project.get('urls', {}).get('Repository', '')
+    github_slug = repo_url.replace('https://github.com/', '')
+
+    return {
+        'version': project['version'],
+        'title': tool_metadata.get('title', 'Alfred-MSToDo'),
+        'author': authors,
+        'license': project.get('license', {}).get('text', 'MIT'),
+        'copyright': tool_metadata.get('copyright', ''),
+        'githubslug': github_slug
+    }
 
 @task
 def clean(c):
-    print(" Removing distribution and temp files...")
+    print(" Removing distribution, temp and local log files...")
+    workflow_log_files = glob.glob(f"../**/workflow*.log*", recursive=True)
     c.run(f"rm -rf {paths.dist}")
     c.run(f"rm -rf {paths.tmp}")
     c.run(f"rm -f {paths.dist_workflow}")
     c.run(f"rm -f {paths.dist_workflow_symlinked}")
+    for log_file in workflow_log_files:
+        c.run(f"rm {log_file}")
     return
 
 @task
@@ -49,7 +80,7 @@ def copy(c, changed_files=None):
     app_files = glob.glob(f"{paths.app_module}/**/*.py", recursive=True)
     app_files.extend(glob.glob(f"{paths.app}/*.py"))
     app_files.extend(glob.glob(f"{paths.app}/*.ini"))
-    app_files.extend(glob.glob(f"{paths.app}/version"))
+    # app_files.extend(glob.glob(f"{paths.app}/version"))
     if changed_files: app_files = list(set(app_files) & set(changed_files))
     for app_file in app_files:
         dest = paths.dist_app + app_file.removeprefix(paths.app_dirname)
@@ -85,10 +116,9 @@ def symlink(c):
         'icon.png',
         'icons',
         'info.plist',
-        'logging_config.ini',
+        'logging_setup.py',
         'mstodo',
-        'workflow',
-        'version'
+        'workflow'
     ]
     symlink_items = []
     for target in targets:
@@ -102,15 +132,23 @@ def symlink(c):
 @task()
 def replace(c):
     import re
-    from mstodo import get_version, get_github_slug
+    import html
     print(" Copying Alfred .plist file and replacing placeholders...")
-    changelog = re.escape(open('./changelog.md').read()) .replace("'","\&#39") # replace ' given challenges with passing string via c.run
+    metadata = get_metadata_from_pyproject()
+    # First escape XML entities for plist (& -> &amp;, < -> &lt;, etc.)
+    # Then escape regex special chars for sed, but skip & since it's now &amp;
+    changelog_xml = html.escape(open('./changelog.md').read())
+    changelog = re.escape(changelog_xml).replace("'", r"\&#39")  # escape ' for shell
     c.run(f"ditto {paths.app}/info.plist {paths.dist_app}")
     with c.cd(paths.dist_app):
         c.run("sed -i '' 's|__changelog__|{}|g' info.plist".format(changelog))
         c.run("""sed -i "" "s|\\&#39|'|g" info.plist""")
-        c.run(f"sed -i '' 's#__version__#{get_version()}#g' info.plist")
-        c.run(f"sed -i '' 's#__githubslug__#{get_github_slug()}#g' info.plist")
+        c.run(f"sed -i '' 's#__version__#{metadata['version']}#g' info.plist")
+        c.run(f"sed -i '' 's#__title__#{metadata['title']}#g' info.plist")
+        c.run(f"sed -i '' 's#__author__#{metadata['author']}#g' info.plist")
+        c.run(f"sed -i '' 's#__license__#{metadata['license']}#g' info.plist")
+        c.run(f"sed -i '' 's#__copyright__#{metadata['copyright']}#g' info.plist")
+        c.run(f"sed -i '' 's#__githubslug__#{metadata['githubslug']}#g' info.plist")
     return
 
 @task(pre=[symlink, replace])
@@ -144,15 +182,16 @@ def test(c):
 @task
 def release(c):
     import re
-    from mstodo import get_version, get_github_slug
     print(" Creating release")
-    version = get_version()
+    metadata = get_metadata_from_pyproject()
+    version = metadata['version']
+    github_slug = metadata['githubslug']
     title = re.escape(open('./changelog.md').read().splitlines()[0].removeprefix('# '))
     c.run(f"cp ./changelog.md {paths.tmp}/changelog.md")
     with c.cd(paths.tmp):
         c.run(f"sed -i '' '1,2d' changelog.md")
         c.run(f"sed -i '' 's#__version__#{version}#g' changelog.md")
-        c.run(f"sed -i '' 's#__githubslug__#{get_github_slug()}#g' changelog.md")
+        c.run(f"sed -i '' 's#__githubslug__#{github_slug}#g' changelog.md")
 
     release_cmd = f"gh release create {version} {paths.dist_workflow} --title {title} --notes-file {paths.tmp}/changelog.md"
     if '-' in version:

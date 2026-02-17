@@ -1,13 +1,27 @@
+from typing import List, Optional
+
 from workflow.notify import notify
-from mstodo import icons, __version__, __githubslug__
+from mstodo import icons
 from mstodo.util import wf_wrapper
 
 wf = wf_wrapper()
 
-def display(args):
+
+def display(args: List[str]) -> None: # pylint: disable=W0613
+    """Display the about menu with workflow information and support options.
+
+    Shows menu items for viewing changelog, reporting issues, and checking
+    for updates.
+
+    Args:
+        args: List of command-line arguments from Alfred.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+    """
     wf.add_item(
         'New in this version',
-        'Installed: ' + __version__ + '. See the changes from the previous version',
+        'Installed: ' + str(wf.version) + '. See the changes from the previous version',
         arg='-about changelog', valid=True, icon=icons.INFO
     )
 
@@ -28,7 +42,21 @@ def display(args):
         autocomplete='', icon=icons.BACK
     )
 
-def commit(args, modifier=None):
+def commit(args: List[str], modifier: Optional[str] = None) -> None: # pylint: disable=W0613
+    """Execute about-related actions.
+
+    Handles workflow updates, opening changelog, Microsoft ToDo website,
+    or issues page based on the provided arguments.
+
+    Args:
+        args: List of command-line arguments specifying the action.
+        modifier: Optional modifier key (alt, cmd, ctrl, fn) pressed during action.
+
+    Side effects:
+        - May start workflow update process.
+        - May open URLs in the default web browser.
+        - Sends notifications about update status.
+    """
     if 'update' in args:
         if wf.start_update():
             notify(
@@ -43,9 +71,12 @@ def commit(args, modifier=None):
     else:
         import webbrowser
 
+        url = wf.info.get('webaddress', '')
+        github_slug = url.replace('https://github.com/', '') if url else 'johandebeurs/alfred-mstodo-workflow'
+
         if 'changelog' in args:
-            webbrowser.open(f"https://github.com/{__githubslug__}/releases/tag/{__version__}")
+            webbrowser.open(f"https://github.com/{github_slug}/releases/tag/{str(wf.version)}")
         elif 'mstodo' in args:
             webbrowser.open('https://todo.microsoft.com/')
         elif 'issues' in args:
-            webbrowser.open(f"https://github.com/{__githubslug__}/issues")
+            webbrowser.open(f"https://github.com/{github_slug}/issues")

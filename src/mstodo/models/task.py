@@ -1,16 +1,16 @@
 # encoding: utf-8
 
-from datetime import date, timedelta, datetime
+from datetime import date, datetime
 import logging
 import time
 
 from peewee import (BooleanField, CharField, ForeignKeyField, IntegerField,
                     PeeweeException, TextField)
 
-from mstodo.models.fields import DateTimeUTCField
+from mstodo.config import MS_TODO_API_WORKERS
 from mstodo.models.base import BaseModel
-from mstodo.models.taskfolder import TaskFolder
-from mstodo.models.user import User
+from mstodo.models.fields import DateTimeUTCField
+from mstodo.models.task_list import TaskList
 from mstodo.util import short_relative_formatted_date, SYMBOLS
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,6 @@ _days_by_recurrence_type = {
 
 _primary_api_fields = [
     'id',
-    'parentFolderId',
     'lastModifiedDateTime',
     'changeKey',
     'status'
@@ -37,30 +36,24 @@ _secondary_api_fields = [
     'reminderDateTime',
     'completedDateTime',
     'recurrence',
-    'subject',
+    'title',  # v1.0 API uses 'title' instead of 'subject'
     'body',
     'importance',
-    'sensitivity',
-    'hasAttachments',
-    'owner',
-    'assignedTo'
+    'hasAttachments'
+    # Note: v1.0 API removed: 'sensitivity', 'owner', 'assignedTo', 'parentFolderId'
 ]
 
 class Task(BaseModel):
     """
-    Extends the Base class and refines it for the Task data structure 
+    Extends the Base class and refines it for the Task data structure
     """
     id = CharField(primary_key=True)
-    list = ForeignKeyField(TaskFolder,index=True, related_name='tasks') #@TODO check related name syntax
+    list = ForeignKeyField(TaskList, index=True, backref='tasks')
     createdDateTime = DateTimeUTCField()
     lastModifiedDateTime = DateTimeUTCField()
-    changeKey = CharField()
     hasAttachments = BooleanField(null=True)
     importance = CharField(index=True, null=True)
     isReminderOn = BooleanField(null=True)
-    owner = ForeignKeyField(User, related_name='created_tasks', null=True)
-    assignedTo = ForeignKeyField(User, related_name='assigned_tasks', null=True)
-    sensitivity = CharField(index=True,null=True)
     status = CharField(index=True)
     title = TextField(index=True)
     completedDateTime = DateTimeUTCField(index=True, null=True)
@@ -71,26 +64,34 @@ class Task(BaseModel):
     body_content = TextField(null=True)
     recurrence_type = CharField(null=True)
     recurrence_count = IntegerField(null=True)
+    # Removed fields not in v1.0 API: changeKey, owner, assignedTo, sensitivity
     # "categories": [],
 
     @staticmethod
     def transform_datamodel(tasks_data):
+        """Transform API response data to match database model.
+
+        Args:
+            tasks_data: List of task dictionaries from the API.
+
+        Returns:
+            List of transformed task dictionaries ready for database insertion.
+        """
         for task in tasks_data:
+            # Skip transformation for removed items
+            if '@removed' in task:
+                continue
+
             for (k, v) in task.copy().items():
-                if k == "subject":
-                    task['title'] = v
-                elif k == "parentFolderId":
-                    task['list'] = v
                 if isinstance(v, dict):
                     if k.find("DateTime") > -1:
-                        # Datetimes are shown as a dicts with naive datetime + separate timezone field
+                        # Datetimes are dicts with naive datetime + separate timezone field
                         task[k] = v['dateTime']
                     elif k == "body":
                         task['body_contentType'] = v['contentType']
                         task['body_content'] = v['content']
                     elif k == 'recurrence':
-                        # WL uses day, week month year, MSTODO uses
-                        # daily weekly absoluteMonthly relativeMonthly a..Yearly r...Yearly
+                        # Parse recurrence pattern
                         if 'week' in v['pattern']['type'].lower():
                             window = 'week'
                         elif 'month' in v['pattern']['type'].lower():
@@ -107,103 +108,49 @@ class Task(BaseModel):
 
     @classmethod
     def sync_all_tasks(cls):
+        """Sync all tasks using delta queries for efficient updates.
+
+        Delta queries handle both full and incremental syncs automatically,
+        so this method works for both first sync and subsequent syncs.
+        """
         from mstodo.api import tasks
+        from mstodo.models.task_list import TaskList
         from concurrent import futures
+
         start = time.time()
-        instances = []
+        all_lists = TaskList.select()
         tasks_data = []
 
-        with futures.ThreadPoolExecutor(max_workers=4) as executor:
-            fields = list(_primary_api_fields)
-            fields.extend(_secondary_api_fields)
-            kwargs = {'fields': fields}
-            job = executor.submit(lambda p: tasks.tasks(**p),kwargs)
-            tasks_data = job.result()
+        # Fetch tasks for each list using delta queries (parallel execution)
+        with futures.ThreadPoolExecutor(max_workers=MS_TODO_API_WORKERS) as executor:
+            jobs = []
+            for task_list in all_lists:
+                job = executor.submit(tasks.tasks, task_list.id)
+                jobs.append(job)
 
-        log.debug(f"Retrieved all {len(tasks_data)} task ids in {round(time.time() - start, 3)} seconds")
-        start = time.time()
+            for job in futures.as_completed(jobs):
+                tasks_data.extend(job.result())
 
+        log.info(f"Retrieved {len(tasks_data)} tasks in {round(time.time() - start, 3)} seconds")
+
+        # Get existing instances
+        instances = []
         try:
-            # Pull instances from DB if they exist
-            instances = cls.select(cls.id, cls.title, cls.changeKey)
+            instances = list(cls.select(cls.id, cls.title))
         except PeeweeException:
             pass
 
-        log.debug(f"Retrieved all {len(instances)} tasks from database in {round(time.time() - start, 3)} seconds")
-        start = time.time()
-
+        # Transform and update
         tasks_data = cls.transform_datamodel(tasks_data)
         cls._perform_updates(instances, tasks_data)
-        cls._sync_children()
+        # cls._sync_children() @TODO check if this is still required given the refactor
 
-        log.debug(f"Completed updates to tasks in {round(time.time() - start, 3)} seconds")
-
-        return None
-
-    @classmethod
-    def sync_modified_tasks(cls):
-        from mstodo.api import tasks
-        from concurrent import futures
-        from workflow import Workflow
-        wf = Workflow()
-        start = time.time()
-        instances = []
-        all_tasks = []
-
-        # Remove 60 seconds to make sure all recent tasks are included
-        # dt = Preferences.current_prefs().last_sync - timedelta(seconds=60)
-        dt = wf.cached_data('last_sync', max_age=0) - timedelta(seconds=60)
-
-        # run a single future for all tasks modified since last run
-        with futures.ThreadPoolExecutor() as executor:
-            job = executor.submit(lambda p: tasks.tasks(**p), {'dt':dt, 'afterdt':True})
-            modified_tasks = job.result()
-
-        # run a separate futures map over all taskfolders @TODO change this to be per taskfolder
-        with futures.ThreadPoolExecutor(max_workers=4) as executor:
-            jobs = (
-                executor.submit(lambda p: tasks.tasks(**p),
-                                {'fields': _primary_api_fields, 'completed':True}),
-                executor.submit(lambda p: tasks.tasks(**p),
-                                {'fields': _primary_api_fields, 'completed':False})
-            )
-            for job in futures.as_completed(jobs):
-                all_tasks += job.result()
-
-        # if task in modified_tasks then remove from all taskfolder data
-        modified_tasks_ids = [task['id'] for task in modified_tasks]
-        for task in all_tasks:
-            if task['id'] in modified_tasks_ids:
-                all_tasks.remove(task)
-        all_tasks.extend(modified_tasks)
-
-        log.debug(f"Retrieved all {len(all_tasks)} including {len(modified_tasks)}\
- modifications since {dt} in {round(time.time() - start, 3)} seconds")
-        start = time.time()
-
-        try:
-            # Pull instances from DB
-            instances = cls.select(cls.id, cls.title, cls.changeKey)
-        except PeeweeException:
-            pass
-
-        log.debug(f"Loaded all {len(instances)} from database in {round(time.time() - start, 3)} seconds")
-        start = time.time()
-
-        all_tasks = cls.transform_datamodel(all_tasks)
-        cls._perform_updates(instances, all_tasks)
-        # cls._sync_children()
-        #FIXME this causes errors, need to refactor
-
-        log.debug(f"Completed updates to tasks in {round(time.time() - start, 3)} seconds")
-
-        return None
 
     @classmethod
     def due_today(cls):
         return (
-            cls.select(cls, TaskFolder)
-            .join(TaskFolder)
+            cls.select(cls, TaskList)
+            .join(TaskList)
             .where(cls.completedDateTime >> None)
             .where(cls.dueDateTime <= date.today())
             .order_by(cls.dueDateTime.asc())
@@ -212,8 +159,8 @@ class Task(BaseModel):
     @classmethod
     def search(cls, query):
         return (
-            cls.select(cls, TaskFolder)
-            .join(TaskFolder)
+            cls.select(cls, TaskList)
+            .join(TaskList)
             .where(cls.completedDateTime >> None)
             .where(cls.title.contains(query))
             .order_by(cls.dueDateTime.asc())
@@ -271,7 +218,7 @@ class Task(BaseModel):
             if self.reminderDateTime:
                 reminder_date_phrase = None
 
-                if self.reminderDateTime.date() == self.dueDateTime:
+                if self.reminderDateTime.date() == self.dueDateTime.date():
                     reminder_date_phrase = 'On due date'
                 else:
                     reminder_date_phrase = short_relative_formatted_date(self.reminderDateTime)
@@ -299,4 +246,3 @@ class Task(BaseModel):
         Custom metadata for the Task object
         """
         order_by = ('lastModifiedDateTime', 'id')
-        expect_revisions = True

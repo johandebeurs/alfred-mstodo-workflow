@@ -1,6 +1,8 @@
 # encoding: utf-8
 
 from random import random
+from typing import List, Optional
+
 from requests import codes
 from peewee import fn
 from workflow.background import is_running
@@ -9,12 +11,34 @@ from workflow.notify import notify
 from mstodo import icons
 from mstodo.models.preferences import Preferences
 from mstodo.models.task_parser import TaskParser
+from mstodo.models.task_list import TaskList
 from mstodo.util import format_time, short_relative_formatted_date, wf_wrapper, SYMBOLS
 
-def _task(args):
+
+def _task(args: List[str]) -> TaskParser:
+    """Parse command-line arguments into a TaskParser object.
+
+    Args:
+        args: List of command-line arguments representing task input.
+
+    Returns:
+        A TaskParser instance with the parsed task information.
+    """
     return TaskParser(' '.join(args))
 
-def task_subtitle(task):
+
+def task_subtitle(task: TaskParser) -> str:
+    """Generate a subtitle string for displaying task details.
+
+    Combines task attributes (star, due date, recurrence, reminder, title, note)
+    into a formatted subtitle for Alfred display.
+
+    Args:
+        task: A TaskParser instance containing task details.
+
+    Returns:
+        A formatted string with task details separated by spaces.
+    """
     subtitle = []
 
     if task.starred:
@@ -26,7 +50,6 @@ def task_subtitle(task):
     if task.recurrence_type:
         if task.recurrence_count > 1:
             subtitle.append(f"{SYMBOLS['recurrence']} Every {task.recurrence_count} {task.recurrence_type}s")
-        # Cannot simply add -ly suffix
         elif task.recurrence_type == 'day':
             subtitle.append(f"{SYMBOLS['recurrence']} Daily")
         else:
@@ -49,7 +72,25 @@ at {format_time(task.reminder_date.time(), 'short')}")
 
     return '   '.join(subtitle)
 
-def display(args):
+
+def display(args: List[str]) -> None:
+    """Display new task creation interface with prompts and suggestions.
+
+    Shows different interfaces based on current input state:
+    - Hashtag suggestions when typing a hashtag
+    - List selection when selecting a list
+    - Recurrence options when setting recurrence
+    - Due date options when setting due date
+    - Reminder options when setting reminder
+    - Main task creation menu otherwise
+
+    Args:
+        args: List of command-line arguments from Alfred representing
+            the current task input.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+    """
     task = _task(args)
     subtitle = task_subtitle(task)
     wf = wf_wrapper()
@@ -77,21 +118,25 @@ def display(args):
                         icon=icons.HASHTAG)
 
     elif task.has_list_prompt:
-        taskfolders = wf.stored_data('taskfolders')
-        if taskfolders:
-            for taskfolder in taskfolders:
+        task_lists = TaskList.select()
+        if task_lists:
+            for task_list in task_lists:
                 # Show some full list names and some concatenated in command
                 # suggestions
-                sample_command = taskfolder['title']
+                sample_command = task_list.title
                 if random() > 0.5:
                     sample_command = sample_command[:int(len(sample_command) * .75)]
-                icon = icons.INBOX if taskfolder['isDefaultFolder'] else icons.LIST
-                wf.add_item(taskfolder['title'], f"Assign task to this folder, e.g. {sample_command.lower()}: {task.title}",
-                             autocomplete=' ' + task.phrase_with(list_title=taskfolder['title']), icon=icon)
-            wf.add_item('Remove folder', 'Tasks without a folder are added to the Inbox',
+                icon = icons.INBOX if task_list.wellknownListName == 'defaultList' else icons.LIST
+                wf.add_item(
+                    task_list.title,
+                    f"Assign task to this list, e.g. {sample_command.lower()}: {task.title}",
+                    autocomplete=' ' + task.phrase_with(list_title=task_list.title),
+                    icon=icon
+                )
+            wf.add_item('Remove list', 'Tasks without a list are added to the Inbox',
                         autocomplete=f" {task.phrase_with(list_title=False)}", icon=icons.CANCEL)
         elif is_running('sync'):
-            wf.add_item('Your folders are being synchronized', 'Please try again in a few moments',
+            wf.add_item('Your lists are being synchronized', 'Please try again in a few moments',
                         autocomplete=f" {task.phrase_with(list_title=False)}", icon=icons.BACK)
 
     # Task has an unfinished recurrence phrase
@@ -126,8 +171,9 @@ def display(args):
         prefs = Preferences.current_prefs()
         default_reminder_time = format_time(prefs.reminder_time, 'short')
         due_date_hint = ' on the due date' if task.due_date else ''
+        reminder_time_str = format_time(prefs.reminder_time, 'short')
         wf.add_item(f"Reminder at {default_reminder_time}{due_date_hint}", f"e.g. r {default_reminder_time}",
-                    autocomplete=f" {task.phrase_with(reminder_date='remind me at %s' % format_time(prefs.reminder_time, 'short'))} ",
+                    autocomplete=f" {task.phrase_with(reminder_date=f'remind me at {reminder_time_str}')} ",
                     icon=icons.REMINDER)
         wf.add_item(f"At noon{due_date_hint}", 'e.g. reminder noon',
                     autocomplete=f" {task.phrase_with(reminder_date='remind me at noon')} ",
@@ -149,7 +195,7 @@ def display(args):
                     valid=task.title != '', icon=icons.TASK) \
                         .add_modifier(key='alt', subtitle=f"…then edit it in the ToDo app    {subtitle}")
 
-        title = 'Change folder' if task.list_title else 'Select a folder'
+        title = 'Change list' if task.list_title else 'Select a list'
         wf.add_item(title, f"Prefix the task, e.g. Automotive: {task.title}",
                     autocomplete=f" {task.phrase_with(list_title=True)}", icon=icons.LIST)
 
@@ -174,17 +220,33 @@ def display(args):
 
         wf.add_item('Main menu', autocomplete='', icon=icons.BACK)
 
-def commit(args, modifier=None):
+def commit(args: List[str], modifier: Optional[str] = None) -> None:
+    """Create a new task via the Microsoft ToDo API.
+
+    Parses the input arguments, creates a task with the specified properties,
+    and optionally opens it in the ToDo app if the alt modifier is pressed.
+
+    Args:
+        args: List of command-line arguments representing the task to create.
+        modifier: Optional modifier key (alt, cmd, ctrl, fn) pressed during action.
+            If 'alt', opens the task in the ToDo app after creation.
+
+    Side effects:
+        - Creates a task via the Microsoft ToDo API.
+        - Updates user preference for last used task list.
+        - Triggers background sync on success.
+        - Sends notification about task creation status.
+        - May open ToDo app if alt modifier is pressed.
+    """
     from mstodo.api import tasks
     from mstodo.sync import background_sync
 
     task = _task(args)
     prefs = Preferences.current_prefs()
 
-    prefs.last_taskfolder_id = task.list_id
+    prefs.last_task_list_id = task.list_id
 
     req = tasks.create_task(task.list_id, task.title,
-                                  assignee_id=task.assignee_id,
                                   recurrence_type=task.recurrence_type,
                                   recurrence_count=task.recurrence_count,
                                   due_date=task.due_date,
@@ -193,7 +255,7 @@ def commit(args, modifier=None):
                                   completed=task.completed,
                                   note=task.note)
 
-    if req.status_code == codes.created:
+    if req.status_code == codes.get('created'):
         notify(title="Task creation success", message=f"The task was added to {task.list_title}")
         background_sync()
         if modifier == 'alt':

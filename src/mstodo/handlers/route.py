@@ -1,20 +1,33 @@
 import os
 import re
+from typing import List
 
 from mstodo import icons
 from mstodo.auth import is_authorised
-from mstodo.sync import background_sync_if_necessary
+from mstodo.sync import background_sync
 from mstodo.util import wf_wrapper
 
 COMMAND_PATTERN = re.compile(r'^[^\w\s]+', re.UNICODE)
 ACTION_PATTERN = re.compile(r'^\W+', re.UNICODE)
 
-def route(args):
+def route(args: List[str]) -> None:
+    """Route commands to appropriate handlers based on user input.
+
+    This is the main routing function for the Alfred workflow. It parses
+    command-line arguments and dispatches to the appropriate handler module.
+
+    Args:
+        args: List of command-line arguments from Alfred.
+
+    Side effects:
+        - Imports and executes handler modules
+        - Sends Alfred feedback via workflow
+        - Triggers background sync if user is logged in
+    """
     handler = None
     command = []
     command_string = ''
     action = 'none'
-    logged_in = is_authorised()
     wf = wf_wrapper()
 
     # Read the stored query, which will correspond to the user's alfred query
@@ -22,7 +35,7 @@ def route(args):
     # when this script was launched due to the startup latency.
     if args[0] == '--stored-query':
         query_file = wf.workflowfile('.query')
-        with open(query_file, 'r') as fp:
+        with open(query_file, 'r', encoding='utf-8') as fp:
             command_string = wf.decode(fp.read())
         os.remove(query_file)
     # Otherwise take the command from the first command line argument
@@ -38,12 +51,12 @@ def route(args):
     if 'about'.find(action) == 0:
         from mstodo.handlers import about
         handler = about
-    elif not logged_in:
+    elif not is_authorised():
         from mstodo.handlers import login
         handler = login
-    elif 'folder'.find(action) == 0:
-        from mstodo.handlers import taskfolder
-        handler = taskfolder
+    elif 'list'.find(action) == 0:
+        from mstodo.handlers import task_list
+        handler = task_list
     elif 'task'.find(action) == 0:
         from mstodo.handlers import task
         handler = task
@@ -84,14 +97,17 @@ def route(args):
             handler.commit(command, modifier)
         else:
             if wf.update_available:
+                from workflow import Workflow # required for dev compatibility with different working directories
+                latest_version_data = Workflow().cached_data('__workflow_latest_version', max_age=0)
+                latest_version = latest_version_data.get('version') if latest_version_data else 'unknown'
+                current_version = wf.settings.get('__workflow_last_version', wf.version)
                 wf.add_item(
                     'An update is available!',
-                    f"Update the ToDo workflow from version {wf.settings['__workflow_last_version']} \
-to {wf.cached_data('__workflow_latest_version').get('version')}",
+                    f"Update the ToDo workflow from version {current_version} to {latest_version}",
                     arg='-about update', valid=True, icon=icons.DOWNLOAD
                 )
             handler.display(command)
             wf.send_feedback()
 
-    if logged_in:
-        background_sync_if_necessary()
+    if is_authorised():
+        background_sync()

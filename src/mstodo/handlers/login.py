@@ -1,6 +1,7 @@
 # encoding: utf-8
 
 import re
+from typing import List, Optional
 
 from mstodo import auth, icons
 from mstodo.util import wf_wrapper
@@ -8,7 +9,20 @@ from mstodo.util import wf_wrapper
 ACTION_PATTERN = re.compile(r'^\W+', re.UNICODE)
 wf = wf_wrapper()
 
-def display(args):
+
+def display(args: List[str]) -> None:
+    """Display the login prompt and help options.
+
+    Shows a login prompt for unauthenticated users, along with help options
+    for troubleshooting authentication issues.
+
+    Args:
+        args: List of command-line arguments from Alfred. May include
+            'help' to show troubleshooting options.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+    """
     getting_help = False
 
     if len(args) > 0:
@@ -47,7 +61,16 @@ def display(args):
             icon=icons.INFO
         )
 
-def commit(args, modifier=None):
+def commit(args: List[str], modifier: Optional[str] = None) -> None: # pylint: disable=W0613
+    """Execute login action to authorize with Microsoft.
+
+    Args:
+        args: List of command-line arguments.
+        modifier: Optional modifier key (alt, cmd, ctrl, fn) pressed during action.
+
+    Side effects:
+        - Initiates Microsoft OAuth authorization flow.
+    """
     command = ' '.join(args).strip()
 
     if not command:

@@ -1,14 +1,15 @@
 # encoding: utf-8
 
 from datetime import date, timedelta
+from typing import Dict, List, Optional
 
 from peewee import OperationalError
 
 from mstodo import icons
 from mstodo.models.preferences import Preferences
 from mstodo.models.task import Task
-from mstodo.models.taskfolder import TaskFolder
-from mstodo.sync import background_sync, background_sync_if_necessary
+from mstodo.models.task_list import TaskList
+from mstodo.sync import background_sync
 from mstodo.util import relaunch_alfred, wf_wrapper
 
 _durations = [
@@ -40,11 +41,30 @@ _durations = [
 ]
 
 
-def _default_label(days):
+def _default_label(days: int) -> str:
+    """Generate a default label for a custom duration.
+
+    Args:
+        days: Number of days for the duration.
+
+    Returns:
+        A formatted string like "In the past 3 days".
+    """
     return f"In the past {days} day{'' if days == 1 else 's'}"
 
 
-def _duration_info(days):
+def _duration_info(days: int) -> Dict:
+    """Get duration information for the specified number of days.
+
+    Looks up predefined duration options, or creates a custom one if
+    no predefined option matches.
+
+    Args:
+        days: Number of days for the duration.
+
+    Returns:
+        A dictionary containing 'days', 'label', 'subtitle', and optionally 'custom'.
+    """
     duration_info = [d for d in _durations if d['days'] == days]
 
     if len(duration_info) > 0:
@@ -58,7 +78,20 @@ def _duration_info(days):
     }
 
 
-def display(args):
+def display(args: List[str]) -> None:
+    """Display completed tasks and duration options.
+
+    Shows tasks completed within the configured duration period. Can also
+    display duration selection menu when 'duration' subcommand is used.
+
+    Args:
+        args: List of command-line arguments from Alfred. May include
+            'duration' subcommand and optional search terms.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+        - May trigger background sync if database error occurs.
+    """
     wf = wf_wrapper()
     prefs = Preferences.current_prefs()
     command = args[1] if len(args) > 1 else None
@@ -71,7 +104,7 @@ def display(args):
         if len(args) > 2:
             try:
                 selected_duration = int(args[2])
-            except:
+            except ValueError:
                 pass
 
         duration_info = _duration_info(selected_duration)
@@ -91,7 +124,7 @@ def display(args):
         return
 
     # Force a sync if not done recently or join if already running
-    background_sync_if_necessary()
+    background_sync()
 
     wf.add_item(duration_info['label'], subtitle='Change the duration for completed tasks',
                 autocomplete='-completed duration ', icon=icons.YESTERDAY)
@@ -101,17 +134,17 @@ def display(args):
     # Build task title query based on the args
     for arg in args[1:]:
         if len(arg) > 1:
-            conditions = conditions & (Task.title.contains(arg) | TaskFolder.title.contains(arg))
+            conditions = conditions & (Task.title.contains(arg) | TaskList.title.contains(arg))
 
     if conditions is None:
         conditions = True
 
-    tasks = Task.select().join(TaskFolder).where(
+    tasks = Task.select().join(TaskList).where(
         (Task.completedDateTime > date.today() - timedelta(days=duration_info['days'])) &
         Task.list.is_null(False) &
         conditions
     )\
-        .order_by(Task.completedDateTime.desc(), Task.reminderDateTime.asc(), Task.changeKey.asc())
+        .order_by(Task.completedDateTime.desc(), Task.reminderDateTime.asc(), Task.id.asc())
 
     try:
         for task in tasks:
@@ -122,7 +155,18 @@ def display(args):
 
     wf.add_item('Main menu', autocomplete='', icon=icons.BACK)
 
-def commit(args, modifier=None):
+def commit(args: List[str], modifier: Optional[str] = None) -> None: # pylint: disable=W0613
+    """Execute completed tasks actions, primarily duration changes.
+
+    Args:
+        args: List of command-line arguments. Expected format includes
+            action type (e.g., 'duration') and value.
+        modifier: Optional modifier key (alt, cmd, ctrl, fn) pressed during action.
+
+    Side effects:
+        - Updates user preferences for completed task duration.
+        - Relaunches Alfred with updated view.
+    """
     relaunch_command = None
     prefs = Preferences.current_prefs()
     action = args[1]

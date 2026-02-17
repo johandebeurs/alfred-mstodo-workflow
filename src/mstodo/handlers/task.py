@@ -1,10 +1,12 @@
 # encoding: utf-8
 
-import logging
 from datetime import date
+import logging
+from typing import List, Optional
 
-from workflow.notify import notify
 from requests import codes
+from workflow.notify import notify
+
 from mstodo import icons
 from mstodo.models.task import Task
 from mstodo.models.task_parser import TaskParser
@@ -12,10 +14,34 @@ from mstodo.util import wf_wrapper
 
 log = logging.getLogger(__name__)
 
-def _task(args):
+
+def _task(args: List[str]) -> TaskParser:
+    """Parse command-line arguments into a TaskParser object.
+
+    Args:
+        args: List of command-line arguments representing task input.
+
+    Returns:
+        A TaskParser instance with the parsed task information.
+    """
     return TaskParser(' '.join(args))
 
-def display(args):
+
+def display(args: List[str]) -> None:
+    """Display task detail view with available actions.
+
+    Shows task information and action options including:
+    - Toggle completion status
+    - View in ToDo app
+    - Delete task
+
+    Args:
+        args: List of command-line arguments. Second element should be
+            the task ID.
+
+    Side effects:
+        - Adds menu items to Alfred workflow feedback.
+    """
     task_id = args[1]
     wf = wf_wrapper()
     task = None
@@ -50,7 +76,23 @@ def display(args):
 
         wf.add_item('Main menu', autocomplete='', icon=icons.BACK)
 
-def commit(args, modifier=None):
+def commit(args: List[str], modifier: Optional[str] = None) -> None:
+    """Execute task actions like completion toggle, delete, or view.
+
+    Args:
+        args: List of command-line arguments. Expected format:
+            [command, task_id, action] where action is one of
+            'toggle-completion', 'delete', or 'view'.
+        modifier: Optional modifier key (alt, cmd, ctrl, fn) pressed during action.
+            If 'alt' with toggle-completion, also sets due date to today.
+
+    Side effects:
+        - Updates task status via Microsoft ToDo API.
+        - May delete task via API.
+        - May open task in ToDo app.
+        - Triggers background sync.
+        - Sends notifications about action results.
+    """
     from mstodo.api import tasks
     from mstodo.sync import background_sync
 
@@ -65,34 +107,34 @@ def commit(args, modifier=None):
             due_date = date.today()
 
         if task.status == 'completed':
-            res = tasks.update_task(task.id, task.changeKey, completed=False, due_date=due_date)
-            if res.status_code == codes.ok:
+            res = tasks.update_task(task.list.id, task.id, completed=False, due_date=due_date)
+            if res.status_code == codes.get('ok'):
                 notify(
                     title='Task updated',
                     message='The task was marked incomplete'
                 )
             else:
-                log.debug(f"An unhandled error occurred when attempting to complete task {task.id}")
+                log.error(f"An unhandled error occurred when attempting to complete task {task.id}")
                 #@TODO raise these as errors properly
         else:
-            res = tasks.update_task(task.id, task.changeKey, completed=True, due_date=due_date)
-            if res.status_code == codes.ok:
+            res = tasks.update_task(task.list.id, task.id, completed=True, due_date=due_date)
+            if res.status_code == codes.get('ok'):
                 notify(
                     title='Task updated',
                     message='The task was marked complete'
                 )
             else:
-                log.debug(f"An unhandled error occurred when attempting to update task {task.id}")
+                log.error(f"An unhandled error occurred when attempting to update task {task.id}")
 
     elif action == 'delete':
-        res = tasks.delete_task(task.id, task.changeKey)
-        if res.status_code == codes.no_content:
+        res = tasks.delete_task(task.list.id, task.id)
+        if res.status_code == codes.get('no_content'):
             notify(
                 title='Task updated',
                 message='The task was marked deleted'
             )
         else:
-            log.debug(f"An unhandled error occurred when attempting to update task {task.id}")
+            log.error(f"An unhandled error occurred when attempting to update task {task.id}")
 
     elif action == 'view':
         import webbrowser

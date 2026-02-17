@@ -23,8 +23,10 @@ def monitor(c, changed_files=None):
     # this means re-copy relevant files to destination and recreate the workflow
     print("Watching files for changes:")
     if changed_files is None:
-        from watchfiles import watch
-        for changes in watch('./src', './screenshots','./changelog.md', './README.md'):
+        from watchfiles import watch, DefaultFilter
+        for changes in watch(
+                './src', './screenshots','./changelog.md', './README.md', './pyproject.toml'
+            ):
             changed_files = [change[1].removeprefix(os.getcwd() + '/') for change in changes] # unpacks the set of FileChanges into a list of absolute paths
             monitor(c, changed_files=changed_files)
     
