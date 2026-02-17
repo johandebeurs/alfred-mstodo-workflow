@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Debug invoke build command",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "invoke",
+            "args": [
+                "-r",
+                "build",
+                "test"
+            ]
+        },
+        {
             "name": "Debug current file",
             "type": "python",
             "request": "launch",
@@ -17,7 +28,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
             "console": "integratedTerminal",
-            "args": []
+            "args": ["${input:command}", "${input:commitFlag}"]
         },
         {
             "name": "Simulate Welcome",
@@ -66,6 +77,20 @@
             "program": "${workspaceFolder}/src/alfred_mstodo_workflow.py",
             "console": "integratedTerminal",
             "args": ["pref sync", "--commit"],
+        }
+    ],
+    "inputs": [
+        {
+            "id": "command",
+            "type": "promptString",
+            "description": "Enter the command to run (e.g. 'about', 'pref', 'logout')"
+        },
+        {
+            "id": "commitFlag",
+            "type": "pickString",
+            "description": "Add --commit flag?",
+            "options": ["", "--commit"],
+            "default": ""
         }
     ]
 }

@@ -206,7 +206,23 @@ Limitations
 Contributing
 ------------
 
-So you want to help make this workflow better? That's great! After cloning the repository, activate a virtual environment (I recommend using `python -m venv .venv && source .venv/bin/activate`), then run `pip install -r requirements.txt --target=./lib` and `pip install -r requirements-dev.txt` to set up the environment for building. Running `invoke -r build build --initial` will build the workflow for development. Open the _mstodo-symlinked.alfredworkflow_ file to install a copy in Alfred that will update whenever you rebuild the workflow. Run `invoke -r build monitor` to monitor the /src folder and automatically re-build the workflow on any file changes. Using this process, the workflow is kept up-to-date while you work.
+So you want to help make this workflow better? That's great! After cloning the repository, install [uv](https://docs.astral.sh/uv/) if you haven't already:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then set up the development environment:
+
+```bash
+# Install production dependencies to ./lib (required for Alfred workflow)
+uv pip install -e .
+
+# Install development dependencies
+uv pip install --dev -e .
+```
+
+Running `invoke -r build build --initial` will build the workflow for development. Open the _mstodo-symlinked.alfredworkflow_ file to install a copy in Alfred that will update whenever you rebuild the workflow. Run `invoke -r build monitor` to monitor the /src folder and automatically re-build the workflow on any file changes. Using this process, the workflow is kept up-to-date while you work.
 
 Settings and launch configs for VSCode are included in the git repo to smooth development and testing if you are using this IDE, including altering pythonpath for debugging. You may want to replicate/modify these if you are using Pycharm or other editors.
 
@@ -217,7 +233,7 @@ Testing
 
 Unit tests should be run before committing to reduce the likelihood of introducing a bug. Your feedback is crucial if anything seems to be broken.
 
-Contributors can use the command `invoke -r build test` to run the test suite and should do so to validate changes in any pull requests. If you add functionality, please back it with unit tests.
+Contributors can use the command `uv run invoke -r build test` to run the test suite and should do so to validate changes in any pull requests. If you add functionality, please back it with unit tests.
 
 Acknowledgements
 ----------------

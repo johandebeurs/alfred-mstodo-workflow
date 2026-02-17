@@ -176,12 +176,18 @@
 			</dict>
 		</array>
 	</dict>
+	<key>author</key>
+	<string>__author__</string>
+	<key>copyright</key>
+	<string>Copyright 2023 Johan de Beurs, 2013-2017 Ian Paterson</string>
 	<key>createdby</key>
 	<string>Johan de Beurs</string>
 	<key>description</key>
 	<string>Create tasks and lists in Microsoft ToDo</string>
 	<key>disabled</key>
 	<false/>
+	<key>license</key>
+	<string>__license__</string>
 	<key>name</key>
 	<string>Microsoft ToDo</string>
 	<key>objects</key>

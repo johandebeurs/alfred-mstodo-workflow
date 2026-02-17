@@ -2,5 +2,13 @@
     "python.analysis.extraPaths": [
         "./src/workflow",
         "./lib"
+    ],
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "MS Todo",
+            "database": "/Users/johan/Library/Application Support/Alfred/Workflow Data/com.johandebeurs.alfred.mstodo/mstodo.db"
+        }
     ]
 }
