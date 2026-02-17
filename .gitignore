@@ -15,3 +15,8 @@ workflow.log*
 pylint.json
 src/workflow
 
+# uv
+.uv
+uv.lock
+__pypackages__
+
